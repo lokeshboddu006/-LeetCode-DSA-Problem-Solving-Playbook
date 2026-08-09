@@ -30,8 +30,6 @@ on:
       - "**/*.pl"
       - "**/*.r"
 
-  workflow_dispatch:
-
 permissions:
   contents: write
 
@@ -58,92 +56,78 @@ jobs:
         run: |
           set -euo pipefail
 
-          echo "Event: ${{ github.event_name }}"
+          echo "Push event detected."
 
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+          BEFORE="${{ github.event.before }}"
+          SHA="${{ github.sha }}"
 
-            echo "Manual run detected."
+          # -----------------------------------------------------
+          # Get ONLY files changed by this push
+          # -----------------------------------------------------
 
-            FILE=$(
-              find . \
-                -type f \
-                \( \
-                  -name "*.java" \
-                  -o -name "*.c" \
-                  -o -name "*.cpp" \
-                  -o -name "*.cc" \
-                  -o -name "*.cxx" \
-                  -o -name "*.py" \
-                  -o -name "*.js" \
-                  -o -name "*.ts" \
-                  -o -name "*.go" \
-                  -o -name "*.rs" \
-                  -o -name "*.kt" \
-                  -o -name "*.kts" \
-                  -o -name "*.cs" \
-                  -o -name "*.php" \
-                  -o -name "*.swift" \
-                  -o -name "*.rb" \
-                  -o -name "*.scala" \
-                  -o -name "*.dart" \
-                  -o -name "*.ex" \
-                  -o -name "*.exs" \
-                  -o -name "*.hs" \
-                  -o -name "*.lua" \
-                  -o -name "*.pl" \
-                  -o -name "*.r" \
-                \) \
-                -not -path "./.git/*" \
-                -printf '%T@ %p\n' \
-              | sort -nr \
-              | head -n 1 \
-              | cut -d' ' -f2-
+          if [[ "$BEFORE" =~ ^0+$ ]]; then
+
+            echo "First push detected."
+
+            FILES=$(
+              git diff-tree \
+                --no-commit-id \
+                --name-only \
+                -r \
+                "$SHA" \
+                || true
             )
 
           else
 
-            echo "Push event detected."
-
             FILES=$(
-              git diff --name-only \
-                "${{ github.event.before }}" \
-                "${{ github.sha }}" \
-                -- \
-                '*.java' \
-                '*.c' \
-                '*.cpp' \
-                '*.cc' \
-                '*.cxx' \
-                '*.py' \
-                '*.js' \
-                '*.ts' \
-                '*.go' \
-                '*.rs' \
-                '*.kt' \
-                '*.kts' \
-                '*.cs' \
-                '*.php' \
-                '*.swift' \
-                '*.rb' \
-                '*.scala' \
-                '*.dart' \
-                '*.ex' \
-                '*.exs' \
-                '*.hs' \
-                '*.lua' \
-                '*.pl' \
-                '*.r' \
-              || true
+              git diff \
+                --name-only \
+                "$BEFORE" \
+                "$SHA" \
+                || true
             )
 
-            FILE=$(echo "$FILES" | head -n 1 || true)
-
           fi
 
-          if [ -z "${FILE:-}" ]; then
-            echo "No supported solution file was found."
+          # -----------------------------------------------------
+          # Find the first supported source file changed by
+          # THIS push only.
+          # -----------------------------------------------------
+
+          FILE=""
+
+          while IFS= read -r candidate; do
+
+            [ -z "$candidate" ] && continue
+
+            case "$candidate" in
+
+              *.java|*.c|*.cpp|*.cc|*.cxx|*.py|*.js|*.ts|*.go|*.rs|*.kt|*.kts|*.cs|*.php|*.swift|*.rb|*.scala|*.dart|*.ex|*.exs|*.hs|*.lua|*.pl|*.r)
+
+                if [ -f "$candidate" ]; then
+                  FILE="$candidate"
+                  break
+                fi
+
+                ;;
+
+            esac
+
+          done <<< "$FILES"
+
+          # -----------------------------------------------------
+          # Make sure a solution file was found
+          # -----------------------------------------------------
+
+          if [ -z "$FILE" ]; then
+            echo "No supported solution file was found in this push."
             exit 1
           fi
+
+          # -----------------------------------------------------
+          # Find matching README in the same problem directory
+          # -----------------------------------------------------
 
           PROBLEM_DIR=$(dirname "$FILE")
           README="$PROBLEM_DIR/README.md"
@@ -562,6 +546,7 @@ jobs:
               )
 
           if not explanation:
+
               print(
                   json.dumps(
                       result,
