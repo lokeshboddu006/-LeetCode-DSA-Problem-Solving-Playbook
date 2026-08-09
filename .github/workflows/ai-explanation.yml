@@ -11,6 +11,24 @@ on:
       - "**/*.cc"
       - "**/*.cxx"
       - "**/*.py"
+      - "**/*.js"
+      - "**/*.ts"
+      - "**/*.go"
+      - "**/*.rs"
+      - "**/*.kt"
+      - "**/*.kts"
+      - "**/*.cs"
+      - "**/*.php"
+      - "**/*.swift"
+      - "**/*.rb"
+      - "**/*.scala"
+      - "**/*.dart"
+      - "**/*.ex"
+      - "**/*.exs"
+      - "**/*.hs"
+      - "**/*.lua"
+      - "**/*.pl"
+      - "**/*.r"
 
   workflow_dispatch:
 
@@ -22,78 +40,136 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+
+      # ---------------------------------------------------------
+      # 1. Checkout repository
+      # ---------------------------------------------------------
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
+      # ---------------------------------------------------------
+      # 2. Find the solution file and matching README
+      # ---------------------------------------------------------
       - name: Find problem to explain
         id: problem
         shell: bash
         run: |
-          set -e
+          set -euo pipefail
 
           echo "Event: ${{ github.event_name }}"
 
-          # Supported solution file extensions.
-          EXTENSIONS='\( -name "*.java" -o -name "*.c" -o -name "*.cpp" -o -name "*.cc" -o -name "*.cxx" -o -name "*.py" \)'
-
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
 
-            echo "Manual workflow run detected."
-            echo "Finding the most recently modified solution file..."
+            echo "Manual run detected."
 
-            FILE=$(find . -type f \
-              -not -path "./.git/*" \
-              \( -name "*.java" -o -name "*.c" -o -name "*.cpp" -o -name "*.cc" -o -name "*.cxx" -o -name "*.py" \) \
-              -printf '%T@ %p\n' \
+            FILE=$(
+              find . \
+                -type f \
+                \( \
+                  -name "*.java" \
+                  -o -name "*.c" \
+                  -o -name "*.cpp" \
+                  -o -name "*.cc" \
+                  -o -name "*.cxx" \
+                  -o -name "*.py" \
+                  -o -name "*.js" \
+                  -o -name "*.ts" \
+                  -o -name "*.go" \
+                  -o -name "*.rs" \
+                  -o -name "*.kt" \
+                  -o -name "*.kts" \
+                  -o -name "*.cs" \
+                  -o -name "*.php" \
+                  -o -name "*.swift" \
+                  -o -name "*.rb" \
+                  -o -name "*.scala" \
+                  -o -name "*.dart" \
+                  -o -name "*.ex" \
+                  -o -name "*.exs" \
+                  -o -name "*.hs" \
+                  -o -name "*.lua" \
+                  -o -name "*.pl" \
+                  -o -name "*.r" \
+                \) \
+                -not -path "./.git/*" \
+                -printf '%T@ %p\n' \
               | sort -nr \
               | head -n 1 \
-              | cut -d' ' -f2-)
+              | cut -d' ' -f2-
+            )
 
           else
 
             echo "Push event detected."
 
-            FILES=$(git diff --name-only \
-              "${{ github.event.before }}" \
-              "${{ github.sha }}" \
-              -- \
-              '*.java' \
-              '*.c' \
-              '*.cpp' \
-              '*.cc' \
-              '*.cxx' \
-              '*.py' \
-              || true)
+            FILES=$(
+              git diff --name-only \
+                "${{ github.event.before }}" \
+                "${{ github.sha }}" \
+                -- \
+                '*.java' \
+                '*.c' \
+                '*.cpp' \
+                '*.cc' \
+                '*.cxx' \
+                '*.py' \
+                '*.js' \
+                '*.ts' \
+                '*.go' \
+                '*.rs' \
+                '*.kt' \
+                '*.kts' \
+                '*.cs' \
+                '*.php' \
+                '*.swift' \
+                '*.rb' \
+                '*.scala' \
+                '*.dart' \
+                '*.ex' \
+                '*.exs' \
+                '*.hs' \
+                '*.lua' \
+                '*.pl' \
+                '*.r' \
+              || true
+            )
 
-            FILE=$(echo "$FILES" | grep -E '\.(java|c|cpp|cc|cxx|py)$' | head -n 1 || true)
+            FILE=$(echo "$FILES" | head -n 1 || true)
 
           fi
 
-          if [ -z "$FILE" ]; then
-            echo "ERROR: No supported solution file was found."
-            echo "Supported languages: Java, C, C++, Python."
+          if [ -z "${FILE:-}" ]; then
+            echo "No supported solution file was found."
             exit 1
           fi
 
           PROBLEM_DIR=$(dirname "$FILE")
           README="$PROBLEM_DIR/README.md"
 
-          echo "Solution file: $FILE"
-          echo "Problem directory: $PROBLEM_DIR"
-          echo "README file: $README"
-
           if [ ! -f "$README" ]; then
-            echo "ERROR: README.md was not found."
-            echo "Expected README at: $README"
+            echo "README.md not found."
+            echo "Solution: $FILE"
+            echo "Expected README: $README"
             exit 1
           fi
 
-          echo "solution_file=$FILE" >> "$GITHUB_OUTPUT"
-          echo "problem_dir=$PROBLEM_DIR" >> "$GITHUB_OUTPUT"
-          echo "readme_file=$README" >> "$GITHUB_OUTPUT"
+          echo "----------------------------------------"
+          echo "Solution: $FILE"
+          echo "Problem directory: $PROBLEM_DIR"
+          echo "README: $README"
+          echo "----------------------------------------"
 
+          {
+            echo "solution_file=$FILE"
+            echo "problem_dir=$PROBLEM_DIR"
+            echo "readme_file=$README"
+          } >> "$GITHUB_OUTPUT"
+
+      # ---------------------------------------------------------
+      # 3. Generate AI explanation
+      # ---------------------------------------------------------
       - name: Generate AI explanation
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
@@ -101,7 +177,7 @@ jobs:
           README_FILE: ${{ steps.problem.outputs.readme_file }}
         shell: bash
         run: |
-          set -e
+          set -euo pipefail
 
           python3 <<'PY'
           import json
@@ -109,167 +185,273 @@ jobs:
           import urllib.request
           import urllib.error
 
-          api_key = os.environ.get("GEMINI_API_KEY", "").strip()
-          solution_file = os.environ["SOLUTION_FILE"]
-          readme_file = os.environ["README_FILE"]
+          # -----------------------------------------------------
+          # Configuration
+          # -----------------------------------------------------
 
-          if not api_key:
+          API_KEY = os.environ.get("GEMINI_API_KEY", "").strip()
+
+          SOLUTION_FILE = os.environ["SOLUTION_FILE"]
+          README_FILE = os.environ["README_FILE"]
+
+          # Current Gemini model.
+          MODEL = "gemini-3.6-flash"
+
+          # -----------------------------------------------------
+          # Validate API key
+          # -----------------------------------------------------
+
+          if not API_KEY:
               raise RuntimeError(
                   "GEMINI_API_KEY GitHub Secret is missing."
               )
 
-          print(f"Reading solution: {solution_file}")
-          print(f"Reading README: {readme_file}")
+          # -----------------------------------------------------
+          # Read solution
+          # -----------------------------------------------------
 
-          with open(solution_file, "r", encoding="utf-8") as f:
+          print(f"Reading solution: {SOLUTION_FILE}")
+
+          with open(
+              SOLUTION_FILE,
+              "r",
+              encoding="utf-8"
+          ) as f:
               solution = f.read()
 
-          with open(readme_file, "r", encoding="utf-8") as f:
+          # -----------------------------------------------------
+          # Read README
+          # -----------------------------------------------------
+
+          print(f"Reading README: {README_FILE}")
+
+          with open(
+              README_FILE,
+              "r",
+              encoding="utf-8"
+          ) as f:
               readme = f.read()
 
+          # -----------------------------------------------------
+          # AI prompt
+          # -----------------------------------------------------
+
           prompt = f"""
-          You are a DSA revision assistant for a personal LeetCode problem-solving
-          playbook.
+          You are an expert competitive programming mentor and DSA
+          revision assistant.
 
-          Your ONLY job is to explain the user's ACTUAL SUBMITTED SOLUTION.
+          Your job is to explain ONLY the user's ACTUAL SUBMITTED
+          SOLUTION.
 
-          The submitted source code is the source of truth for the implementation.
+          The submitted source code is the source of truth for the
+          implementation.
 
-          The user wants to understand THEIR OWN solution later when revising
-          this problem months or years from now.
+          The user wants to understand THEIR OWN solution months or
+          years later when revising the problem.
 
-          STRICT RULES:
+          ============================================================
+          STRICT RULES
+          ============================================================
 
-          1. Explain ONLY the submitted solution and the approach actually
-             implemented in that solution.
+          1. Explain ONLY the submitted solution and the approach
+             actually implemented in that source code.
 
-          2. Do NOT replace the user's approach with the canonical LeetCode
-             solution.
+          2. DO NOT replace the user's approach with the canonical
+             LeetCode solution.
 
-          3. Do NOT suggest a completely different algorithm.
+          3. DO NOT suggest a completely different algorithm.
 
-          4. Do NOT suggest a different data structure as an alternative
-             solution.
+          4. DO NOT suggest a different data structure as an
+             alternative solution.
 
-          5. Do NOT compare the user's solution against other people's
+          5. DO NOT compare the user's solution with other people's
              solutions.
 
-          6. Do NOT solve the problem independently and then explain a
-             different solution.
+          6. DO NOT solve the problem independently and then explain
+             a different solution.
 
-          7. Do NOT invent implementation details.
+          7. DO NOT invent implementation details.
 
-          8. Every explanation must be grounded in the actual submitted
-             source code.
+          8. Every explanation must be grounded in the actual
+             submitted source code.
 
-          9. If the submitted solution contains a weakness, limitation,
-             unnecessary operation, edge-case concern, or implementation
-             issue, mention it honestly.
+          9. If the submitted solution has a weakness, limitation,
+             unnecessary operation, edge-case risk, readability issue,
+             or implementation concern, mention it honestly.
 
-          10. Do NOT criticize the solution merely because another approach
-              exists.
+          10. Weaknesses must refer to the ACTUAL submitted solution.
 
-          11. Explain why the ACTUAL submitted code works.
+          11. Do NOT criticize the solution merely because another
+              approach exists.
 
-          12. Complexity must correspond to the ACTUAL submitted code.
+          12. If the solution is already optimal for the problem,
+              say so when appropriate.
 
-          13. Identify the DSA pattern actually used by the submitted code.
+          13. Do NOT repeat the original problem statement.
 
-          14. Keep the explanation useful for future DSA revision.
+          14. The existing README contains the original problem
+              statement and possibly other repository information.
+              Use it only to understand the problem context.
 
-          15. Do NOT rewrite the original problem statement.
+          15. The explanation should teach the user how THEIR code
+              works.
 
-          16. Do NOT repeat the full README.
+          16. Pay attention to:
+              - variables
+              - loops
+              - conditions
+              - data structures
+              - helper methods
+              - recursion
+              - DP states
+              - transitions
+              - invariants
+              - greedy choices
+              - graph traversal
+              - binary search conditions
+              - mathematical observations
+              - overflow handling
+              - edge cases
+              - implementation-specific optimizations
 
-          17. Return ONLY Markdown.
+          17. Do not hallucinate code that does not exist.
 
-          18. Do NOT wrap the entire response in a code fence.
+          18. If something cannot be determined from the code, say
+              that it cannot be determined instead of inventing it.
 
-          19. Start exactly with:
+          19. Return ONLY Markdown.
+
+          20. Do NOT wrap the entire response in a code fence.
+
+          21. Start EXACTLY with:
 
           ## 🧠 AI Explanation
 
-          Use exactly these sections:
+          ============================================================
+          REQUIRED FORMAT
+          ============================================================
 
           ## 🧠 AI Explanation
 
           ### 💡 Intuition
 
-          Explain the key idea behind the user's actual solution in simple
-          language.
+          Explain the key observation behind THIS submitted solution
+          in simple language.
+
+          Explain why the user's implementation works conceptually.
 
           ### 🔍 Approach
 
           Explain the user's actual approach step-by-step.
 
+          Follow the flow of the submitted source code.
+
+          Explain important variables, loops, conditions, helper
+          functions, recursion, data structures, or other relevant
+          implementation details.
+
           ### 🧩 Algorithm
 
-          Describe the exact algorithm implemented in the submitted code.
+          Give the exact algorithm implemented by the user.
 
-          If it uses DP, explain the actual state, transition, base cases,
-          and iteration order.
+          If applicable, include:
+          - recurrence
+          - DP state
+          - transition
+          - invariant
+          - greedy rule
+          - binary-search condition
+          - graph traversal
+          - mathematical transformation
 
-          If it uses DFS/BFS, explain the actual traversal and state.
-
-          If it uses two pointers, sliding window, binary search, stack,
-          queue, hashing, greedy logic, recursion, backtracking, math,
-          bit manipulation, etc., explain exactly how the submitted code
-          uses it.
-
-          Do not invent concepts that are not present in the code.
+          Do NOT introduce an algorithm that the user did not implement.
 
           ### ✅ Why This Works
 
-          Explain why the actual submitted implementation produces the
-          correct result.
+          Give a concise correctness explanation for the user's
+          actual implementation.
 
-          Give a concise correctness argument based on the code.
+          Explain why the important steps preserve correctness and
+          why the final result is correct.
 
           ### ⏱️ Complexity
 
-          Give the time complexity of the ACTUAL implementation.
+          State:
 
-          Give the space complexity of the ACTUAL implementation.
+          - Time complexity
+          - Space complexity
 
-          Explain where those complexities come from.
+          Explain where those complexities come from in THIS code.
 
           ### 🧠 DSA Pattern
 
-          Identify the main DSA pattern or technique actually used.
+          Identify the main DSA pattern used by THIS solution.
+
+          Examples include:
+
+          - Dynamic Programming
+          - Greedy
+          - Binary Search
+          - DFS
+          - BFS
+          - Backtracking
+          - Two Pointers
+          - Sliding Window
+          - Stack
+          - Queue
+          - Hashing
+          - Heap / Priority Queue
+          - Graph
+          - Union Find
+          - Trie
+          - Prefix Sum
+          - Monotonic Stack
+          - Bit Manipulation
+          - Math
+          - Recursion
+          - Divide and Conquer
 
           ### ⚠️ Common Mistakes
 
-          List mistakes that are relevant to THIS problem and THIS approach.
+          List important mistakes someone could make while
+          implementing or understanding THIS solution.
 
-          Do not give unrelated generic advice.
+          Focus on mistakes relevant to the actual code.
 
           ### 🚀 Optimization Notes
 
-          Mention useful implementation or optimization details that are
-          actually relevant to the submitted solution.
+          Mention useful implementation or performance details
+          relevant to THIS submitted solution.
 
-          If the submitted solution is already efficient, say so.
+          Only mention optimizations that are actually relevant.
 
-          If there is a genuine weakness, explain it clearly without replacing
-          the solution with a completely different approach.
+          If there is nothing meaningful to optimize, say so.
 
-          =========================
-          EXISTING PROBLEM README
-          =========================
+          ============================================================
+          ORIGINAL PROBLEM README
+          ============================================================
 
           {readme}
 
-          =========================
+          ============================================================
           USER'S ACTUAL SUBMITTED SOLUTION
-          =========================
+          ============================================================
 
           {solution}
           """
 
+          # -----------------------------------------------------
+          # Gemini API endpoint
+          # -----------------------------------------------------
+
           url = (
               "https://generativelanguage.googleapis.com/v1beta/"
-              "models/gemini-2.5-flash:generateContent"
+              f"models/{MODEL}:generateContent"
           )
+
+          # -----------------------------------------------------
+          # Request payload
+          # -----------------------------------------------------
 
           payload = {
               "contents": [
@@ -283,121 +465,193 @@ jobs:
                   }
               ],
               "generationConfig": {
-                  "temperature": 0.25,
                   "maxOutputTokens": 5000
               }
           }
 
           data = json.dumps(payload).encode("utf-8")
 
+          # -----------------------------------------------------
+          # HTTP request
+          # -----------------------------------------------------
+
           request = urllib.request.Request(
               url,
               data=data,
               headers={
                   "Content-Type": "application/json",
-                  "x-goog-api-key": api_key
+                  "x-goog-api-key": API_KEY
               },
               method="POST"
           )
 
+          print(f"Calling Gemini model: {MODEL}")
+
           try:
               with urllib.request.urlopen(
                   request,
-                  timeout=120
+                  timeout=180
               ) as response:
-                  result = json.loads(
-                      response.read().decode("utf-8")
+
+                  response_body = response.read().decode(
+                      "utf-8"
                   )
 
+                  result = json.loads(response_body)
+
           except urllib.error.HTTPError as e:
+
               error_body = e.read().decode(
                   "utf-8",
                   errors="replace"
               )
 
+              print("----------------------------------------")
               print("Gemini API request failed.")
               print(f"HTTP status: {e.code}")
               print(error_body)
+              print("----------------------------------------")
 
               raise
 
           except urllib.error.URLError as e:
+
               raise RuntimeError(
                   f"Could not connect to Gemini API: {e}"
               )
 
+          # -----------------------------------------------------
+          # Extract generated explanation
+          # -----------------------------------------------------
+
           try:
-              candidates = result.get("candidates", [])
+
+              candidates = result["candidates"]
 
               if not candidates:
-                  print(json.dumps(result, indent=2))
                   raise RuntimeError(
                       "Gemini returned no candidates."
                   )
 
-              content = candidates[0].get("content", {})
-              parts = content.get("parts", [])
+              content = candidates[0]["content"]
+
+              parts = content["parts"]
 
               explanation = "\n".join(
                   part.get("text", "")
                   for part in parts
-                  if isinstance(part, dict) and "text" in part
+                  if isinstance(part, dict)
+                  and "text" in part
               ).strip()
 
-          except (KeyError, IndexError, TypeError):
-              print(json.dumps(result, indent=2))
+          except (
+              KeyError,
+              IndexError,
+              TypeError
+          ):
+
+              print(
+                  json.dumps(
+                      result,
+                      indent=2
+                  )
+              )
+
               raise RuntimeError(
                   "Gemini returned an unexpected response."
               )
 
           if not explanation:
-              print(json.dumps(result, indent=2))
+              print(
+                  json.dumps(
+                      result,
+                      indent=2
+                  )
+              )
+
               raise RuntimeError(
                   "Gemini returned an empty explanation."
               )
 
+          # -----------------------------------------------------
+          # Make sure the generated section starts correctly
+          # -----------------------------------------------------
+
           marker = "## 🧠 AI Explanation"
 
-          # Remove any previous AI explanation and replace it
-          # with the newly generated explanation.
+          if marker in explanation:
+
+              explanation = (
+                  marker
+                  + explanation.split(marker, 1)[1]
+              )
+
+          else:
+
+              explanation = (
+                  marker
+                  + "\n\n"
+                  + explanation
+              )
+
+          # -----------------------------------------------------
+          # Replace previous AI explanation if one exists
+          # -----------------------------------------------------
+
           if marker in readme:
+
               readme = (
                   readme.split(marker, 1)[0]
                   .rstrip()
                   + "\n\n"
-                  + explanation
+                  + explanation.strip()
                   + "\n"
               )
+
           else:
+
               readme = (
                   readme.rstrip()
                   + "\n\n---\n\n"
-                  + explanation
+                  + explanation.strip()
                   + "\n"
               )
 
+          # -----------------------------------------------------
+          # Write README
+          # -----------------------------------------------------
+
           with open(
-              readme_file,
+              README_FILE,
               "w",
               encoding="utf-8"
           ) as f:
+
               f.write(readme)
 
-          print(f"Successfully updated {readme_file}")
+          print("----------------------------------------")
+          print(f"Updated: {README_FILE}")
+          print("----------------------------------------")
+
           PY
 
+      # ---------------------------------------------------------
+      # 4. Commit generated explanation
+      # ---------------------------------------------------------
       - name: Commit AI explanation
         shell: bash
         run: |
-          set -e
+          set -euo pipefail
 
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-          git add "${{ steps.problem.outputs.readme_file }}"
+          README_FILE="${{ steps.problem.outputs.readme_file }}"
+
+          git add "$README_FILE"
 
           if git diff --cached --quiet; then
-            echo "No README changes to commit."
+            echo "No README changes detected."
             exit 0
           fi
 
