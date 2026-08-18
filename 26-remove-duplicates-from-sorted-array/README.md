@@ -49,3 +49,86 @@ It does not matter what you leave beyond the returned k (hence they are undersco
 	<li><code>-100 &lt;= nums[i] &lt;= 100</code></li>
 	<li><code>nums</code> is sorted in <strong>non-decreasing</strong> order.</li>
 </ul>
+
+---
+
+## 🧠 AI Explanation
+
+### 💡 Intuition
+
+In a sorted array, duplicate values are guaranteed to be adjacent to each other. 
+
+The core idea of your solution is to use two pointers:
+1. A **read pointer** (`o`) that scans through the array starting from index `1` to find unique numbers by comparing each element with its immediate predecessor (`nums[o-1]`).
+2. A **write pointer** (`h`) that tracks where the next unique element should be placed in the front portion of the array.
+
+Whenever `nums[o]` differs from `nums[o-1]`, it means a new unique number has been encountered. You then advance the write pointer `h` and copy `nums[o]` to `nums[h]`.
+
+---
+
+### 🔍 Approach
+
+1. **Initialization**:
+   - `n = nums.length`: Stores the total size of the input array.
+   - `h = 0`: Represents the index of the last placed unique element (starts at index `0` since `nums[0]` is always unique by default).
+   - `o = 1`: The pointer iterating through the array starting from index `1`.
+
+2. **Traversal Loop (`while (o < n)`)**:
+   - Check if `nums[o] == nums[o-1]`:
+     - If true, `nums[o]` is a duplicate of the element right before it. Increment `o` and skip the rest of the loop using `continue`.
+   - If `nums[o] != nums[o-1]`:
+     - A new unique element is found.
+     - Increment `h` (`h++`) to make space for the new unique value.
+     - Overwrite `nums[h]` with `nums[o]`.
+     - Increment `o` (`o++`) to move to the next element.
+
+3. **Return**:
+   - Return `h + 1`. Since `h` is the `0`-based index of the last placed unique element, `h + 1` represents the count of unique elements in `nums`.
+
+---
+
+### 🧩 Algorithm
+
+**Two-Pointer (Read / Write Pointer)**
+
+- **Invariant**: At any step, the subarray `nums[0...h]` contains the unique elements seen so far in sorted order.
+- **Pointer `o`**: Scans from index `1` to `n - 1`.
+- **Condition**: 
+  - Duplicate check: `nums[o] == nums[o-1]`
+  - Write operation: `h = h + 1`, `nums[h] = nums[o]`
+
+---
+
+### ✅ Why This Works
+
+- Because the array is sorted in non-decreasing order, all identical elements are contiguous. Comparing `nums[o]` with `nums[o-1]` guarantees that every duplicate group is recognized immediately upon encountering its second element.
+- The first element `nums[0]` is naturally unique, so `h` starts at `0`.
+- Writing unique elements sequentially to `nums[h]` ensures that the first `h + 1` elements of the array contain only unique values in their original relative order.
+
+---
+
+### ⏱️ Complexity
+
+- **Time Complexity**: $\mathcal{O}(n)$, where $n$ is the length of `nums`. The read pointer `o` inspects each element of the array from index `1` to `n - 1` exactly once.
+- **Space Complexity**: $\mathcal{O}(1)$ auxiliary space. The modification is done in-place using only integer variables (`n`, `h`, `o`).
+
+---
+
+### 🧠 DSA Pattern
+
+- **Two Pointers** (Fast / Slow or Read / Write pointers)
+
+---
+
+### ⚠️ Common Mistakes
+
+1. **Returning `h` instead of `h + 1`**: Since `h` is zero-indexed, returning `h` directly would be off by one (e.g., if there is 1 unique element, `h` stays `0`, so returning `h + 1` yields `1`).
+2. **Starting pointer `o` from index `0`**: Comparing `nums[o]` with `nums[o-1]` when `o = 0` would trigger an `ArrayIndexOutOfBoundsException`.
+3. **Redundant `o++` operations**: Note that `o++` is written both inside the `if` block before `continue` and after `nums[h] = nums[o]`. If `o++` were missed in either branch, it would lead to an infinite loop.
+
+---
+
+### 🚀 Optimization Notes
+
+- **Optimal Complexity**: The solution is already optimal with $\mathcal{O}(n)$ time and $\mathcal{O}(1)$ space complexity.
+- **Code Structure**: Notice that `o++` is performed in both branches of the conditional logic. Removing `o++` from the `if` block and placing a single `o++` outside the `if` block simplifies the control flow and avoids duplicate increments.
