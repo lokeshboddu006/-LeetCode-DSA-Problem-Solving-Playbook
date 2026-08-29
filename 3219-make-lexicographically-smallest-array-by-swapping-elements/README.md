@@ -47,3 +47,84 @@ We cannot obtain a lexicographically smaller array by applying any more operatio
 	<li><code>1 &lt;= nums[i] &lt;= 10<sup>9</sup></code></li>
 	<li><code>1 &lt;= limit &lt;= 10<sup>9</sup></code></li>
 </ul>
+
+---
+
+## 🧠 AI Explanation
+
+### 💡 Intuition
+
+The problem allows swapping any two elements if their absolute difference is at most `k`. Because the swap operation is transitive (if $A$ can swap with $B$ and $B$ can swap with $C$, then $A$ can swap with $C$), all elements that can directly or indirectly reach each other form a **connected component** (or group).
+
+Within any connected component, we can rearrange the elements into any order we like among their original positions. To make the final array **lexicographically smallest**, we should place the smallest available values of each group into the smallest available original positions (indices) of that group.
+
+By sorting the indices based on their values, elements that belong to the same connected component will appear consecutively because adjacent values in sorted order with a difference $\le k$ bridge the connection between elements.
+
+### 🔍 Approach
+
+1. **Initialize and Sort Indices**:
+   - Create an array `p` of size `n` populated with indices `0` to `n - 1`.
+   - Sort `p` using `Arrays.sort` with a custom comparator: `(i, j) -> Integer.compare(a[i], a[j])`. This arranges the indices in non-decreasing order of their values in `a`.
+
+2. **Group Connected Components (Two Pointers)**:
+   - Use two pointers `i` and `j` to scan through the sorted indices `p`.
+   - Advance `j` as long as `a[p[j]] - a[p[j - 1]] <= k`. This identifies a contiguous segment `p[i ... j-1]` where every element is connected to the next.
+
+3. **Collect and Sort Original Positions**:
+   - Extract the subset of indices for the current group into a new array `x = Arrays.copyOfRange(p, i, j)`.
+   - Sort `x` in standard ascending order so that `x[0] < x[1] < ... < x[x.length - 1]`. These represent the original positional indices where the group's elements resided.
+
+4. **Assign Values Greedily**:
+   - Iterate through the group with index `t`: place the $t$-th smallest value `a[p[i + t]]` into the $t$-th smallest original position `x[t]` of the result array `r`:
+     `r[x[t]] = a[p[i + t]]`.
+
+5. **Advance and Return**:
+   - Set `i = j` to process the next connected group.
+   - Once all elements are processed, return `r`.
+
+### 🧩 Algorithm
+
+- **Group Identification**:
+  - Iterate `i` from `0` to `n - 1`.
+  - Expand `j = i + 1` while `j < n` and `a[p[j]] - a[p[j - 1]] <= k`.
+- **Index Sorting & Value Placement**:
+  - `x = p[i ... j-1]`
+  - `sort(x)`
+  - `r[x[t]] = a[p[i + t]]` for $0 \le t < |x|$
+  - `i = j`
+
+### ✅ Why This Works
+
+- **Reachability Invariant**: Sorting values allows us to identify all reachable pairs efficiently. If `a[p[j]] - a[p[j-1]] > k`, then no element from `p[0 ... j-1]` can reach any element from `p[j ... n-1]`, ensuring groups are completely partitioned correctly.
+- **Optimal Placement**: Within each group, every element can move to any position occupied by the group. To minimize the array lexicographically, the smallest index in the group must receive the smallest value in the group, the second smallest index receives the second smallest value, and so on.
+
+### ⏱️ Complexity
+
+- **Time Complexity**: 
+  - Sorting `p` takes $O(n \log n)$ time.
+  - The outer loop and `j` pointer scan `p` linearly in $O(n)$ total iterations across all groups.
+  - Sorting each temporary sub-array `x` takes $O(|x| \log |x|)$. Since the sum of lengths $\sum |x| = n$, the total time spent sorting all `x` arrays is bounded by $O(n \log n)$.
+  - **Total Time Complexity**: $O(n \log n)$.
+
+- **Space Complexity**:
+  - Result array `r` takes $O(n)$ space.
+  - Wrapped index array `p` takes $O(n)$ space.
+  - Sub-array `x` allocation takes up to $O(n)$ space across all groups.
+  - **Total Space Complexity**: $O(n)$.
+
+### 🧠 DSA Pattern
+
+- **Sorting**: Used to order both values (to identify components) and indices (to assign values sequentially).
+- **Two Pointers / Sliding Window**: Used to segment `p` into contiguous connected components.
+- **Greedy Strategy**: Matching the smallest indices to the smallest values in each group.
+
+### ⚠️ Common Mistakes
+
+- **Primitive Array Sorting with Custom Comparator**: Java's `Arrays.sort` with a `Comparator` requires object reference types (`Integer[]` instead of `int[]`). Using primitive `int[]` would fail compilation when passing a custom lambda comparator.
+- **Index Out of Bounds during Grouping**: Forgetting `j < n` before checking `a[p[j]] - a[p[j - 1]] <= k` would cause an `ArrayIndexOutOfBoundsException`. The code correctly places `j < n` first in the `while` condition.
+
+### 🚀 Optimization Notes
+
+- **Object Overhead**: Using `Integer[] p` incurs boxing and memory overhead. Creating a custom pair or flattening indices into dynamic primitives would reduce GC pressure, though $O(n \log n)$ time complexity remains unchanged.
+- **Repeated Sub-array Allocations**: `Arrays.copyOfRange(p, i, j)` allocates a new `Integer[]` for every connected component. Sorting positions in-place or using primitive arrays could reduce memory allocations.
+- **Optimality**: Asymptotically, the solution is already optimal ($O(n \log n)$ time and $O(n)$ extra space).
