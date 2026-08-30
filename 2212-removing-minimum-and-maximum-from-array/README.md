@@ -49,3 +49,106 @@ We can remove it with 1 deletion.
 	<li><code>-10<sup>5</sup> &lt;= nums[i] &lt;= 10<sup>5</sup></code></li>
 	<li>The integers in <code>nums</code> are <strong>distinct</strong>.</li>
 </ul>
+
+---
+
+## 🧠 AI Explanation
+
+### 💡 Intuition
+
+To remove both the minimum and maximum elements from the array using only front or back deletions, you first need to locate where both elements reside.
+
+Once you know their positions, there are only 3 possible strategies to remove both elements:
+1. **Remove both from the front (left)**: Delete elements from the start until you reach the element that is further away from the front.
+2. **Remove both from the back (right)**: Delete elements from the end until you reach the element that is further away from the back.
+3. **Split deletions (front and back)**: Delete the element closer to the front from the front, and delete the element closer to the back from the back.
+
+By finding the minimum cost among these 3 choices, you get the optimal number of deletions.
+
+---
+
+### 🔍 Approach
+
+1. **Find Extremum Indices (`l` and `h`)**:
+   - Initialize `l = 0` (index of minimum) and `h = 0` (index of maximum).
+   - Loop through array `a` with variable `i` from index `0` to `n - 1`.
+   - Update `l` whenever a smaller value is found (`a[i] < a[l]`).
+   - Update `h` whenever a larger value is found (`a[i] > a[h]`).
+
+2. **Normalize Indices (`i` and `j`)**:
+   - Sort the two indices so that `i` is the smaller index and `j` is the larger index:
+     - `i = Math.min(l, h)` (the index closer to the start).
+     - `j = Math.max(l, h)` (the index closer to the end).
+   - *(Note: Variable `i` is reused here after the loop finishes).*
+
+3. **Calculate Options and Return Minimum**:
+   - **Both from front**: Deleting up to index `j` from the left takes `j + 1` deletions.
+   - **Both from back**: Deleting up to index `i` from the right takes `n - i` deletions.
+   - **Split**: Deleting index `i` from the front takes `i + 1` deletions, and deleting index `j` from the back takes `n - j` deletions. Total = `i + 1 + n - j`.
+   - Return `Math.min(j + 1, Math.min(n - i, i + 1 + n - j))`.
+
+---
+
+### 🧩 Algorithm
+
+1. Initialize `n = a.length`, `l = 0`, `h = 0`, `i = 0`.
+2. For `i` from `0` to `n - 1`:
+   - If `a[i] < a[l]`, set `l = i`.
+   - If `a[i] > a[h]`, set `h = i`.
+3. Set `i = Math.min(l, h)` (first index).
+4. Set `j = Math.max(l, h)` (second index).
+5. Compute:
+   $$\text{cost}_1 = j + 1$$
+   $$\text{cost}_2 = n - i$$
+   $$\text{cost}_3 = (i + 1) + (n - j)$$
+6. Return $\min(\text{cost}_1, \text{cost}_2, \text{cost}_3)$.
+
+---
+
+### ✅ Why This Works
+
+Because deletions are restricted strictly to the front and back of the array:
+- Any deletion sequence that removes both elements must end up taking a contiguous prefix from the left, a contiguous suffix from the right, or both.
+- Ordering `i` (smaller index) and `j` (larger index) ensures that:
+  - `j + 1` covers both indices from the left.
+  - `n - i` covers both indices from the right.
+  - `(i + 1) + (n - j)` covers `i` from the left and `j` from the right without any overlapping index count.
+
+Evaluating all 3 exhaustive possibilities guarantees finding the global minimum deletions needed.
+
+---
+
+### ⏱️ Complexity
+
+- **Time Complexity:** $\mathcal{O}(n)$
+  - A single pass over the array of size $n$ is required to locate the minimum and maximum elements. Ordering indices and computing the minimum of 3 values takes $\mathcal{O}(1)$ time.
+
+- **Space Complexity:** $\mathcal{O}(1)$
+  - Only primitive variables (`n`, `l`, `h`, `i`, `j`) are used, requiring constant additional memory.
+
+---
+
+### 🧠 DSA Pattern
+
+- **Greedy / Math**: Evaluating all exhaustive structural options (3 choices) once key locations are determined.
+- **Array / Linear Scan**: Single pass to locate min and max indices.
+
+---
+
+### ⚠️ Common Mistakes
+
+1. **Variable Shadowing / Reuse Confusion**:
+   - Reusing the loop counter variable `i` for `Math.min(l, h)` works correctly in this code because the loop has completed, but it can make the code harder to read during revision.
+2. **Off-by-One Errors**:
+   - For a 0-indexed position $x$:
+     - Number of deletions from the front is $x + 1$.
+     - Number of deletions from the back is $n - x$.
+3. **Forgetting to Sort `l` and `h`**:
+   - Calculating `i + 1 + n - j` requires that $i \le j$. If you don't take `min(l, h)` and `max(l, h)`, the split option formula would yield incorrect values when the maximum appears before the minimum.
+
+---
+
+### 🚀 Optimization Notes
+
+- This solution is already optimal in terms of **Time Complexity ($\mathcal{O}(n)$)** and **Space Complexity ($\mathcal{O}(1)$)**.
+- **Readability Improvement**: Instead of reusing `i` both as a loop index and as the smaller index variable, declaring `i` inside the loop `for (int k = 0; k < n; k++)` and using clear variable names like `first` and `second` would improve clarity without any overhead.
