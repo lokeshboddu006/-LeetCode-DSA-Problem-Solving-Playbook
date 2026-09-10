@@ -14,18 +14,24 @@
  * }
  */
 class Solution {
-    int ans = 0;
+    int c = 0;
+
     public int averageOfSubtree(TreeNode root) {
-        dfs(root);
-        return ans;
+        f(root);
+        return c;
     }
-    private int[] dfs(TreeNode node) {
-        if (node == null) return new int[]{0, 0};
-        int[] left = dfs(node.left);
-        int[] right = dfs(node.right);
-        int sum = left[0] + right[0] + node.val;
-        int cnt = left[1] + right[1] + 1;
-        if (sum / cnt == node.val) ans++;
-        return new int[]{sum, cnt};
+
+    private int[] f(TreeNode n) {
+        if (n == null) return new int[]{0, 0};
+        
+        int[] l = f(n.left);
+        int[] r = f(n.right);
+        
+        int s = l[0] + r[0] + n.val;
+        int k = l[1] + r[1] + 1;
+        
+        if (s / k == n.val) c++;
+        
+        return new int[]{s, k};
     }
 }
