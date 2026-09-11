@@ -1,22 +1,16 @@
 class Solution {
-    public int totalNumbers(int[] digits) {
-        HashSet<Integer> map = new HashSet<>();
-        int n = digits.length;
+    public int totalNumbers(int[] d) {
+        int[] c = new int[10];
+        for (int x : d) c[x]++;
+        int n = 0;
         
-        for (int i = 0; i < n; i++) {
-            for (int j = 0; j < n; j++) {
-                for (int k = 0; k < n; k++) {
-                    if (i != j && i != k && j != k) {
-                        if (digits[i] != 0) {
-                            if (digits[k] % 2 == 0) {
-                                int number = digits[i] * 100 + digits[j] * 10 + digits[k];
-                                map.add(number);
-                            }
-                        }
-                    }
-                }
-            }
+        for (int i = 100; i < 1000; i += 2) {
+            int x = i / 100, y = (i / 10) % 10, z = i % 10;
+            c[x]--; c[y]--; c[z]--;
+            if (c[x] >= 0 && c[y] >= 0 && c[z] >= 0) n++;
+            c[x]++; c[y]++; c[z]++;
         }
-        return map.size();
+        
+        return n;
     }
 }
