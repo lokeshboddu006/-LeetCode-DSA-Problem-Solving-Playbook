@@ -1,116 +1,131 @@
 class Solution {
+    static class Node {
+        long score;
+        int[] ids;
 
-    static class Pair {
-        long sum;
-        List<Integer> ids;
-
-        Pair(long sum, List<Integer> ids) {
-            this.sum = sum;
+        Node(long score, int[] ids) {
+            this.score = score;
             this.ids = ids;
         }
-
-        Pair copy() {
-            return new Pair(sum, new ArrayList<>(ids));
-        }
     }
 
-    Pair[][] dp;
-    int[] next;
-
-    Pair better(Pair a, Pair b) {
-        if (a.sum != b.sum)
-            return a.sum > b.sum ? a : b;
-
-        Collections.sort(a.ids);
-        Collections.sort(b.ids);
-
-        for (int i = 0; i < Math.min(a.ids.size(), b.ids.size()); i++) {
-            if (!a.ids.get(i).equals(b.ids.get(i)))
-                return a.ids.get(i) < b.ids.get(i) ? a : b;
+    private boolean better(Node a, Node b) {
+        if (a == null) {
+            return false;
         }
 
-        return a.ids.size() <= b.ids.size() ? a : b;
-    }
-
-    int lowerBound(List<List<Integer>> in, List<Integer> order, int target) {
-        int l = 0, r = order.size();
-
-        while (l < r) {
-            int m = l + (r - l) / 2;
-
-            if (in.get(order.get(m)).get(0) >= target)
-                r = m;
-            else
-                l = m + 1;
+        if (b == null) {
+            return true;
         }
 
-        return l;
+        if (a.score != b.score) {
+            return a.score > b.score;
+        }
+
+        int len = Math.min(a.ids.length, b.ids.length);
+
+        for (int i = 0; i < len; i++) {
+            if (a.ids[i] != b.ids[i]) {
+                return a.ids[i] < b.ids[i];
+            }
+        }
+
+        return a.ids.length < b.ids.length;
     }
 
-    Pair solve(List<List<Integer>> in, List<Integer> order,
-               int pos, int count) {
+    private int[] addSorted(int[] ids, int value) {
+        int[] result = Arrays.copyOf(ids, ids.length + 1);
 
-        if (pos == order.size() || count == 4)
-            return new Pair(0, new ArrayList<>());
+        result[ids.length] = value;
 
-        if (dp[pos][count] != null)
-            return dp[pos][count].copy();
+        Arrays.sort(result);
 
-        Pair skip = solve(in, order, pos + 1, count);
+        return result;
+    }
 
-        int id = order.get(pos);
+    private int lowerBound(long[] ends, int length, long target) {
+        int left = 0;
+        int right = length;
 
-        Pair take = solve(
-            in,
-            order,
-            next[pos],
-            count + 1
-        );
+        while (left < right) {
+            int mid = left + (right - left) / 2;
 
-        take.sum += in.get(id).get(2);
-        take.ids.add(id);
+            if (ends[mid] >= target) {
+                right = mid;
+            } else {
+                left = mid + 1;
+            }
+        }
 
-        dp[pos][count] = better(skip, take);
-
-        return dp[pos][count].copy();
+        return left;
     }
 
     public int[] maximumWeight(List<List<Integer>> intervals) {
         int n = intervals.size();
 
-        List<Integer> order = new ArrayList<>();
+        final int K = 4;
 
-        for (int i = 0; i < n; i++)
-            order.add(i);
-
-        order.sort((a, b) ->
-            Integer.compare(
-                intervals.get(a).get(0),
-                intervals.get(b).get(0)
-            )
-        );
-
-        next = new int[n];
+        long[][] arr = new long[n][4];
 
         for (int i = 0; i < n; i++) {
-            int id = order.get(i);
-            next[i] = lowerBound(
-                intervals,
-                order,
-                intervals.get(id).get(1) + 1
-            );
+            arr[i][0] = intervals.get(i).get(0);
+            arr[i][1] = intervals.get(i).get(1);
+            arr[i][2] = intervals.get(i).get(2);
+            arr[i][3] = i;
         }
 
-        dp = new Pair[n][4];
+        Arrays.sort(arr, (a, b) -> Long.compare(a[1], b[1]));
 
-        List<Integer> ans = solve(intervals, order, 0, 0).ids;
-        Collections.sort(ans);
+        long[] ends = new long[n];
 
-        int[] res = new int[ans.size()];
+        for (int i = 0; i < n; i++) {
+            ends[i] = arr[i][1];
+        }
 
-        for (int i = 0; i < ans.size(); i++)
-            res[i] = ans.get(i);
+        Node[][] dp = new Node[K + 1][n + 1];
 
-        return res;
+        for (int i = 0; i <= n; i++) {
+            dp[0][i] = new Node(0, new int[0]);
+        }
+
+        for (int i = 1; i <= n; i++) {
+            long left = arr[i - 1][0];
+            long weight = arr[i - 1][2];
+            int originalIndex = (int) arr[i - 1][3];
+
+            int p = lowerBound(ends, i - 1, left);
+
+            for (int k = 1; k <= K; k++) {
+
+                dp[k][i] = dp[k][i - 1];
+
+                if (dp[k - 1][p] != null) {
+
+                    int[] ids = addSorted(
+                        dp[k - 1][p].ids,
+                        originalIndex
+                    );
+
+                    Node take = new Node(
+                        dp[k - 1][p].score + weight,
+                        ids
+                    );
+
+                    if (better(take, dp[k][i])) {
+                        dp[k][i] = take;
+                    }
+                }
+            }
+        }
+
+        Node answer = null;
+
+        for (int k = 1; k <= K; k++) {
+            if (better(dp[k][n], answer)) {
+                answer = dp[k][n];
+            }
+        }
+
+        return answer.ids;
     }
 }
