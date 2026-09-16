@@ -35,3 +35,100 @@ The image above shows the 5 different ways {(0,2),(2,3)}, {(0,1),(1,3)}, {(0,1),
 	<li><code>2 &lt;= n &lt;= 1000</code></li>
 	<li><code>1 &lt;= k &lt;= n-1</code></li>
 </ul>
+
+---
+
+## 🧠 AI Explanation
+
+### 💡 Intuition
+
+Instead of using dynamic programming to build solutions step-by-step, this implementation leverages a **combinatorial reduction**. 
+
+To select $k$ non-overlapping line segments from $n$ points (where adjacent segments are allowed to share endpoints):
+1. Each segment needs $2$ endpoints (a start and an end), so $k$ segments require $2k$ endpoints in total.
+2. If segments were strictly forbidden from sharing endpoints, we would simply pick $2k$ distinct points out of $n$, which is $\binom{n}{2k}$.
+3. However, segments **can** share endpoints. Using a transformation equivalent to the *Stars and Bars* principle, allowing $k-1$ shared boundaries adds $k-1$ virtual positions to our choice pool.
+
+Thus, the total number of valid segment configurations is exactly equal to choosing $2k$ points out of $(n + k - 1)$ positions:
+$$\binom{n + k - 1}{2k}$$
+
+Your code computes this combination $\binom{N}{R}$ modulo $10^9 + 7$ directly in $O(R)$ time using modular arithmetic and Fermat's Little Theorem.
+
+---
+
+### 🔍 Approach
+
+1. **Parameter Transformation**:
+   - Calculate total choose parameter: `N = n + k - 1L`.
+   - Calculate items to choose: `R = 2L * k`.
+2. **Symmetry Optimization**:
+   - Apply the symmetry property of combinations, $\binom{N}{R} = \binom{N}{N - R}$, by taking `R = Math.min(R, N - R)`. This minimizes the number of loop iterations.
+3. **Product Accumulation**:
+   - Initialize `numerator = 1` and `denominator = 1`.
+   - Loop `i` from `1` to `R`:
+     - Accumulate numerator terms: $(N - R + 1) \times (N - R + 2) \times \dots \times N$ modulo $10^9 + 7$.
+     - Accumulate denominator terms: $1 \times 2 \times \dots \times R$ modulo $10^9 + 7$.
+4. **Modular Division via Fermat's Little Theorem**:
+   - Since $MOD = 10^9 + 7$ is prime, division by `denominator` modulo $MOD$ is equivalent to multiplying by `denominator`$^{MOD - 2} \pmod{MOD}$.
+   - Compute `inverseDenominator = modPow(denominator, MOD - 2)` using binary exponentiation (`modPow`).
+5. **Final Result**:
+   - Multiply `numerator` by `inverseDenominator` modulo $10^9 + 7$ and cast to `int`.
+
+---
+
+### 🧩 Algorithm
+
+1. **Combinatorial Representation**:
+   $$\text{Result} = \binom{n + k - 1}{2k} \pmod{10^9 + 7}$$
+
+2. **Binary Exponentiation (`modPow`)**:
+   - Computes $(base^{exp}) \pmod{MOD}$ in $O(\log exp)$ time by squaring the base and halving the exponent.
+
+3. **Fermat's Little Theorem (Modular Inverse)**:
+   $$\frac{A}{B} \pmod M \equiv A \times B^{M-2} \pmod M \quad \text{when } M \text{ is prime}$$
+
+---
+
+### ✅ Why This Works
+
+- **Combinatorial Correctness**: Mapping the $k$ segments (with potential shared endpoints) to picking $2k$ boundaries from $n + k - 1$ points uniquely accounts for all valid line segment arrangements.
+- **Arithmetic Safety**: 
+  - Using `long` variables prevents overflow before applying modulo operations during multiplications.
+  - Applying Fermat's Little Theorem works because $MOD = 10^9 + 7$ is prime and $1 \le denominator < MOD$, guaranteeing that `denominator` and $MOD$ are coprime.
+
+---
+
+### ⏱️ Complexity
+
+- **Time Complexity**: $O(\min(k, n - k) + \log(\text{MOD}))$
+  - The loop runs $R \le \min(2k, n - k - 1)$ times, which is bounded by $O(n)$.
+  - `modPow` computes $(10^9 + 7 - 2)$ in $O(\log(\text{MOD})) \approx 30$ steps.
+  - Overall time complexity is $O(n)$, drastically faster than standard $O(n \cdot k)$ dynamic programming solutions.
+
+- **Space Complexity**: $O(1)$ auxiliary space.
+  - Only a few primitive `long` variables (`N`, `R`, `numerator`, `denominator`, `inverseDenominator`) are used.
+
+---
+
+### 🧠 DSA Pattern
+
+- **Math / Combinatorics** (Combination $\binom{N}{R}$)
+- **Modular Arithmetic** (Modular Inverse via Fermat's Little Theorem)
+- **Bit Manipulation / Binary Exponentiation** (Exponentiation by Squaring in `modPow`)
+
+---
+
+### ⚠️ Common Mistakes
+
+1. **Standard Division under Modulo**:
+   Attempting `numerator / denominator % MOD` directly without using modular inverse would lead to incorrect results because standard integer division does not preserve equivalence under modular arithmetic.
+
+2. **Integer Overflow**:
+   Performing `numerator * (N - R + i)` without casting intermediate variables to `long` or taking `% MOD` at each step would cause integer overflow before modulo is applied.
+
+---
+
+### 🚀 Optimization Notes
+
+- **Optimal Time & Space**: This solution is mathematically optimal, running in $O(n)$ time and $O(1)$ space instead of allocating an $O(n \cdot k)$ dynamic programming matrix.
+- **Symmetry Trick**: The line `R = Math.min(R, N - R)` effectively cuts the loop iterations in half when $2k > \frac{N}{2}$.
