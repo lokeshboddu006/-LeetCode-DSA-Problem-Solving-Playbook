@@ -1,31 +1,31 @@
+import java.util.Arrays;
+
 class Solution {
-    public int minSumOfLengths(int[] arr, int target) {
-        int n = arr.length;
-        int[] best = new int[n];
-        java.util.Arrays.fill(best, Integer.MAX_VALUE);
-        int left = 0;
-        int sum = 0;
-        int answer = Integer.MAX_VALUE;
-        for (int right = 0; right < n; right++) {
-            sum += arr[right];
-            while (sum > target) {
-                sum -= arr[left];
-                left++;
+    public int minSumOfLengths(int[] a, int t) {
+        int n = a.length;
+        int[] d = new int[n];
+        Arrays.fill(d, Integer.MAX_VALUE);
+        
+        int r = Integer.MAX_VALUE;
+        int s = 0;
+        int l = 0;
+        
+        for (int i = 0; i < n; i++) {
+            s += a[i];
+            while (s > t) {
+                s -= a[l++];
             }
-            if (sum == target) {
-                int currentLength = right - left + 1;
-                if (left > 0 && best[left - 1] != Integer.MAX_VALUE) {
-                    answer = Math.min(
-                        answer,
-                        currentLength + best[left - 1]
-                    );
+            if (s == t) {
+                int len = i - l + 1;
+                if (l > 0 && d[l - 1] != Integer.MAX_VALUE) {
+                    r = Math.min(r, len + d[l - 1]);
                 }
-                best[right] = currentLength;
+                d[i] = len;
             }
-            if (right > 0) {
-                best[right] = Math.min(best[right], best[right - 1]);
+            if (i > 0) {
+                d[i] = Math.min(d[i], d[i - 1]);
             }
         }
-        return answer == Integer.MAX_VALUE ? -1 : answer;
+        return r == Integer.MAX_VALUE ? -1 : r;
     }
 }
