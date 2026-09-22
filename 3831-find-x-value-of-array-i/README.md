@@ -90,3 +90,100 @@
 	<li><code>1 &lt;= nums.length &lt;= 10<sup>5</sup></code></li>
 	<li><code>1 &lt;= k &lt;= 5</code></li>
 </ul>
+
+---
+
+## 🧠 AI Explanation
+
+### 💡 Intuition
+
+Removing a non-overlapping prefix and suffix from `nums` such that `nums` remains non-empty is equivalent to choosing a **non-empty contiguous subarray**. The product of this remaining subarray leaves a remainder `x` when divided by `k`.
+
+To count the total number of such subarrays efficiently, the solution iterates through `A` while maintaining the counts of all subarray products modulo `k` that **end at the current index**. By maintaining these frequency counts at each step, you can extend previous subarrays by multiplying them with the current element modulo `k`, as well as start a new subarray containing only the current element.
+
+---
+
+### 🔍 Approach
+
+1. **Initialization**:
+   - `res`: An array of size `k` (type `long`) to store the total counts of non-empty subarrays whose product modulo `k` equals `x`.
+   - `freq`: An array of size `k` (type `int`) that stores the counts of product remainders for all subarrays ending at the *previous* index.
+
+2. **Iterating through each element**:
+   - For each element `n` in `A`:
+     - Reduce `n` modulo `k`: `n %= k`.
+     - Create a temporary array `cur` of size `k` to store the modulo counts of subarrays ending at the *current* index.
+     - **Start a new subarray**: Increment `cur[n]++` to represent the single-element subarray `[n]`.
+     - **Extend existing subarrays**: Loop `x` from `0` to `k - 1`. For every remainder `x` that had `freq[x]` subarrays ending at the previous index, multiplying by `n` changes their remainder to `(x * n) % k`. Add `freq[x]` to `cur[(x * n) % k]`.
+
+3. **State Update & Result Accumulation**:
+   - Set `freq = cur` to prepare for the next iteration.
+   - Add all counts in `freq` to `res` because every subarray ending at the current index is a valid non-empty subarray.
+
+4. **Return**:
+   - Return the accumulated counts in `res`.
+
+---
+
+### 🧩 Algorithm
+
+This is a **1D Dynamic Programming / Rolling Array** approach over remainders modulo `k`.
+
+* **DP State**: 
+  `freq[x]` = number of contiguous subarrays ending at index `i - 1` whose product modulo `k` equals `x`.
+
+* **Base Case (at current index `i` with `n = A[i] % k`)**:
+  Start a new subarray of length 1:
+  $$\text{cur}[n] = 1$$
+
+* **Transition**:
+  For each $x \in [0, k-1]$:
+  $$\text{cur}[(x \times n) \bmod k] = \text{cur}[(x \times n) \bmod k] + \text{freq}[x]$$
+
+* **Accumulation**:
+  $$\text{res}[x] = \text{res}[x] + \text{freq}[x] \quad \forall x \in [0, k-1]$$
+
+---
+
+### ✅ Why This Works
+
+Every non-empty contiguous subarray ends at some index $i$ in `A`. By processing elements one by one from left to right:
+- `freq` correctly captures all subarray products modulo $k$ that end at $i - 1$.
+- Multiplying all previous products modulo $k$ by `A[i] % k` correctly transitions their remainders to the new end index $i$.
+- Adding `cur[n]++` accounts for the subarray starting and ending at index $i$.
+- Summing `freq` into `res` at each step ensures every valid contiguous subarray is counted exactly once without missing any or double-counting.
+
+---
+
+### ⏱️ Complexity
+
+- **Time Complexity:** $\mathcal{O}(N \cdot k)$
+  - We loop through $N$ elements (`A.length`).
+  - Inside the loop, we perform $k$ transitions to build `cur` and $k$ operations to update `res`.
+  - Since $k \le 5$, $N \cdot k$ takes at most $5 \times 10^5$ operations, which easily runs in $\mathcal{O}(N)$ time.
+
+- **Space Complexity:** $\mathcal{O}(k)$
+  - `res`, `freq`, and `cur` all have a fixed size of $k$.
+  - Auxiliary space is $O(k)$ (or $O(1)$ relative to $N$).
+
+---
+
+### 🧠 DSA Pattern
+
+- **Dynamic Programming (Modulo Arithmetic / State Compression)**
+- **Prefix / Subarray Counting via Rolling States**
+
+---
+
+### ⚠️ Common Mistakes
+
+1. **Ignoring Single-Element Subarrays**: Forgetting to initialize `cur[n]++` would miss all subarrays of length 1 and any subarrays starting at the current index.
+2. **Updating `freq` In-Place**: Trying to update `freq` directly without a temporary `cur` array would cause intermediate updates to pollute subsequent modulo calculations in the same step.
+3. **Integer Overflow during Modulo**: If $n$ was not reduced using `n %= k` or if $k$ were large, $x \cdot n$ could overflow integer limits. However, since $k \le 5$ and `n` is reduced modulo $k$, $x \cdot n \le 16$, which safely avoids overflow.
+
+---
+
+### 🚀 Optimization Notes
+
+- **Optimal Time Complexity**: The time complexity $\mathcal{O}(N \cdot k)$ is already optimal for this DP state representation.
+- **Memory Allocation**: Inside the loop, `int[] cur = new int[k]` creates a new array object of size $k$ in every iteration ($N$ allocations). While $N \le 10^5$ is well within Java's garbage collection limits, allocating two reusable buffers outside the loop and swapping them would eliminate heap allocations entirely.
