@@ -56,3 +56,69 @@
 <ul>
 	<li><code>1 &lt;= seq.size &lt;= 10000</code></li>
 </ul>
+
+---
+
+## 🧠 AI Explanation
+
+### 💡 Intuition
+
+The goal is to split a valid parentheses string into two valid subsequences (group `0` and group `1`) such that the maximum nesting depth between the two groups is minimized.
+
+The key idea behind your solution is to track the current nesting level using a counter (`depth`) and distribute characters between the two groups based on whether the current nesting depth is odd or even (`depth % 2`). By alternating nesting levels between group `0` and group `1`, the maximum depth is roughly cut in half, achieving the optimal split.
+
+### 🔍 Approach
+
+1. **Depth Tracking**:
+   - You initialize `depth = 0` to keep track of the current nesting level.
+   - You initialize the output array `res` with the same length as `seq`.
+
+2. **Single Pass Processing**:
+   - Iterate through each character `ch` of `seq` at index `i`.
+   - **When `ch == '('`**:
+     - You increment `depth` first (`depth++`), as this opening bracket takes us one level deeper.
+     - You assign `res[i] = depth % 2`. This assigns odd depths to group `1` and even depths to group `0`.
+   - **When `ch == ')'`**:
+     - You record `res[i] = depth % 2` first, using the depth level of this closing bracket before exiting it.
+     - You then decrement `depth` (`depth--`) as you exit the current nesting level.
+
+3. **Return**:
+   - Return `res` containing `0`s and `1`s.
+
+### 🧩 Algorithm
+
+- **State Variable**: `depth` (tracks current nesting level).
+- **Transitions**:
+  - For `'('`:
+    1. $\text{depth} \leftarrow \text{depth} + 1$
+    2. $\text{res}[i] \leftarrow \text{depth} \bmod 2$
+  - For `')'`:
+    1. $\text{res}[i] \leftarrow \text{depth} \bmod 2$
+    2. $\text{depth} \leftarrow \text{depth} - 1$
+
+- **Invariant**:
+  Any matching pair of `(` and `)` at nesting depth $d$ will evaluate `depth % 2` at $d$, ensuring that both the opening and closing brackets of that pair are assigned to the exact same group ($d \bmod 2$).
+
+### ✅ Why This Works
+
+- **Valid Subsequences**: Because a matching pair `(` and `)` at depth level $d$ receives the exact same group label ($d \bmod 2$), all nested pairs remain complete within their assigned subsequence, keeping both subsequences valid parentheses strings.
+- **Minimizing Max Depth**: By placing alternate levels into alternate groups (levels 1, 3, 5... into one group and levels 2, 4, 6... into the other), the nesting depth of each subgroup is at most $\lceil \text{max\_depth} / 2 \rceil$, which is the theoretical minimum possible.
+
+### ⏱️ Complexity
+
+- **Time Complexity:** $\mathcal{O}(n)$, where $n$ is the length of `seq`. The algorithm iterates through the string once, performing constant time $\mathcal{O}(1)$ operations per character.
+- **Space Complexity:** $\mathcal{O}(n)$ required for the output array `res`. Beyond the result array, only $\mathcal{O}(1)$ auxiliary memory is used (`depth`, `i`, `ch`).
+
+### 🧠 DSA Pattern
+
+- **Greedy / Parity Splitting**: Using depth counting and parity (`depth % 2`) to evenly distribute nested structures across two sets.
+
+### ⚠️ Common Mistakes
+
+- **Incorrect Order of Operations for `')'`**: If you decrement `depth` *before* assigning `res[i] = depth % 2`, the closing parenthesis will be evaluated at depth $d - 1$ while its matching opening parenthesis was evaluated at depth $d$. This would put them in different groups and invalidate the parentheses sequences.
+- **Incorrect Order of Operations for `'('`**: If you assigned `res[i]` *before* incrementing `depth`, depth 1 would be evaluated as $0 \bmod 2 = 0$, but the matching `)` at depth 1 would be evaluated as $1 \bmod 2 = 1$, creating a mismatch.
+
+### 🚀 Optimization Notes
+
+- This solution is already optimal in terms of both time ($\mathcal{O}(n)$) and auxiliary space ($\mathcal{O}(1)$ beyond the required output array).
+- Calling `seq.charAt(i)` inside the loop is lightweight in Java. Optionally converting the string to a `char[]` via `seq.toCharArray()` can slightly improve execution time due to direct array access, but performance is already $\mathcal{O}(n)$.
