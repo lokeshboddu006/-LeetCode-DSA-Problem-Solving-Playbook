@@ -49,3 +49,67 @@
 	<li><code>0 &lt;= nums[i] &lt;= n - 1</code></li>
 	<li><code>nums</code> is a permutation of integers from <code>0</code> to <code>n - 1</code>.</li>
 </ul>
+
+---
+
+## 🧠 AI Explanation
+
+### 💡 Intuition
+
+In a permutation of numbers from `0` to `n - 1`, an element `nums[i]` is in its correct sorted position if `nums[i] == i`. Any element where `nums[i] != i` must participate in swaps to reach its correct index.
+
+For any swap operation involving a value `x` under the rule `x AND y == k`, every set bit in `k` must also be set in `x` (i.e., `k` must be a bitwise submask of `x`). Consequently, every misplaced element must have set bits wherever `k` has set bits. To find the maximum possible `k`, we greedily take the bitwise AND of all elements that are currently out of place (`nums[i] != i`).
+
+### 🔍 Approach
+
+1. **Bitmask Accumulator Initialization**:
+   - Initialize `k = -1`. In 32-bit signed integers (two's complement), `-1` has all bits set to `1` (i.e., `0xFFFFFFFF`), serving as the identity element for the bitwise AND operation.
+
+2. **Single Pass Scan**:
+   - Iterate through the array from `i = 0` to `nums.length - 1`.
+   - Check if the current element is misplaced (`nums[i] != i`).
+
+3. **Accumulate Bitwise AND**:
+   - For every misplaced element, update `k &= nums[i]`.
+   - If `k` reaches `0`, return `0` immediately (since bitwise AND can never restore bits once zeroed out).
+
+4. **Return Result**:
+   - After inspecting all elements, return `Math.max(k, 0)`.
+   - If the array was already sorted, no element triggered the `if (nums[i] != i)` block, leaving `k` as `-1`. `Math.max(-1, 0)` correctly returns `0`.
+
+### 🧩 Algorithm
+
+- **Loop Invariant**: At index `i`, `k` holds the bitwise AND of all elements `nums[j]` encountered so far (where $0 \le j < i$) that satisfy `nums[j] != j`.
+- **State Transition**:
+  $$\text{if } \text{nums}[i] \neq i \implies k = k \mathbin{\&} \text{nums}[i]$$
+- **Early Exit Condition**:
+  $$\text{if } k == 0 \implies \text{return } 0$$
+- **Final Output Calculation**:
+  $$\text{return } \max(k, 0)$$
+
+### ✅ Why This Works
+
+- **Mandatory Bit Preservation**: If an element `nums[i]` is not at index `i`, it must be moved. For `nums[i] AND y == k` to hold in any swap involving `nums[i]`, `k` cannot contain any bit that is `0` in `nums[i]`.
+- **Intersection of Valid Bits**: Combining all misplaced numbers via bitwise AND computes the largest value `k` whose set bits are present in *every* misplaced number.
+- **Already Sorted Array**: If `nums[i] == i` for all indices, `k` remains `-1`. `Math.max(-1, 0)` handles this edge case seamlessly by returning `0`.
+
+### ⏱️ Complexity
+
+- **Time Complexity**: $\mathcal{O}(n)$ — The solution scans the array once. Each iteration performs $\mathcal{O}(1)$ comparisons and bitwise operations. The `if (k == 0)` check allows early exit.
+- **Space Complexity**: $\mathcal{O}(1)$ — Uses a single integer variable `k` without allocating extra memory.
+
+### 🧠 DSA Pattern
+
+- **Bit Manipulation**
+- **Greedy**
+
+### ⚠️ Common Mistakes
+
+- **Initializing `k` to 0**: Setting `k = 0` initially would cause `k &= nums[i]` to always evaluate to `0`. Initializing to `-1` (all bits set to `1`) is essential for cumulative bitwise AND.
+- **Including Correctly Placed Elements**: Including elements where `nums[i] == i` in the bitwise AND would unnecessarily clear bits and reduce `k` further than required.
+- **Missing Already-Sorted Edge Case**: Returning `k` directly without `Math.max(k, 0)` would return `-1` instead of `0` when the array is already sorted.
+
+### 🚀 Optimization Notes
+
+- The solution is already optimal in terms of both time ($\mathcal{O}(n)$) and space ($\mathcal{O}(1)$).
+- The early return `if (k == 0) return 0;` optimizes best/average-case runtime by stopping execution as soon as `k` degrades to zero.
