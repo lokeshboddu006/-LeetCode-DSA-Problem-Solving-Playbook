@@ -1,20 +1,18 @@
 class Solution {
-    public int uniquePaths(int[][] grid) {
-        final int mod = 1_000_000_007;
-        int[] arr = new int[grid[0].length]; 
-        arr[0] = 1;
-        for (int[] row : grid) {
-            int ri = 0;  
-            for (int j = 0; j < row.length; j++) {
-                if (row[j] == 1) { 
-                    int t = ri;
-                    ri = arr[j];
-                    arr[j] = t;
-                } else {  
-                    ri = arr[j] = (ri + arr[j]) % mod;
-                }
+    static final int[][][] mat = {{{1, 1}, {1, 1}}, {{0, 1}, {1, 0}}};
+    static final int MOD = 1000000007;
+    public int uniquePaths(int[][] A) {
+        int n = A[0].length, left = 0;
+        int[] dp = new int[n];
+        dp[0] = 1;
+        for (int[] row : A) {
+            left = 0;
+            for (int j = 0; j < n; j++) {
+                int top = dp[j], c = row[j];
+                dp[j] = (left * mat[c][1][0] + top * mat[c][1][1]) % MOD;
+                left  = (left * mat[c][0][0] + top * mat[c][0][1]) % MOD;
             }
         }
-        return arr[arr.length - 1];
+        return left;
     }
 }
