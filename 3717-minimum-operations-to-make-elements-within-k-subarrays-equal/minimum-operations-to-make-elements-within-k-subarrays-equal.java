@@ -1,81 +1,69 @@
-import java.util.*;
-
 class Solution {
-    public long minOperations(int[] a, int x, int k) {
-        int n = a.length;
-        long[] w = new long[n - x + 1];
-        TreeMap<Integer, Integer> l = new TreeMap<>();
-        TreeMap<Integer, Integer> r = new TreeMap<>();
-        int lSz = 0, rSz = 0;
-        long s = 0, t = 0;
-
+    public long minOperations(int[] nums, int x, int k) {
+        int n = nums.length;
+        int[] vals = nums.clone();
+        Arrays.sort(vals);
+        int m = 0;
         for (int i = 0; i < n; i++) {
-            if (lSz == 0 || a[i] <= l.lastKey()) {
-                l.put(a[i], l.getOrDefault(a[i], 0) + 1);
-                lSz++; s += a[i];
-            } else {
-                r.put(a[i], r.getOrDefault(a[i], 0) + 1);
-                rSz++; t += a[i];
+            if (m == 0 || vals[i] != vals[m - 1]) {
+                vals[m++] = vals[i];
             }
-
-            if (lSz > rSz + 1) {
-                int m = l.lastKey();
-                if (l.put(m, l.get(m) - 1) == 1) l.remove(m);
-                lSz--; s -= m;
-                r.put(m, r.getOrDefault(m, 0) + 1);
-                rSz++; t += m;
-            } else if (rSz > lSz) {
-                int m = r.firstKey();
-                if (r.put(m, r.get(m) - 1) == 1) r.remove(m);
-                rSz--; t -= m;
-                l.put(m, l.getOrDefault(m, 0) + 1);
-                lSz++; s += m;
+        }
+        int[] rk = new int[n];
+        for (int i = 0; i < n; i++) {
+            rk[i] = Arrays.binarySearch(vals, 0, m, nums[i]) + 1;
+        }
+        int[] cnt = new int[m + 1];
+        long[] sm = new long[m + 1];
+        int top = 1;
+        while (top * 2 <= m) top *= 2;
+        int need = (x + 1) / 2;
+        int w = n - x + 1;
+        long[] cost = new long[w];
+        long total = 0;
+        for (int i = 0; i < n; i++) {
+            total += nums[i];
+            for (int p = rk[i]; p <= m; p += p & -p) {
+                cnt[p] += 1;
+                sm[p] += nums[i];
             }
-
             if (i >= x) {
-                int o = a[i - x];
-                if (l.containsKey(o)) {
-                    if (l.put(o, l.get(o) - 1) == 1) l.remove(o);
-                    lSz--; s -= o;
-                } else {
-                    if (r.put(o, r.get(o) - 1) == 1) r.remove(o);
-                    rSz--; t -= o;
-                }
-
-                if (lSz > rSz + 1) {
-                    int m = l.lastKey();
-                    if (l.put(m, l.get(m) - 1) == 1) l.remove(m);
-                    lSz--; s -= m;
-                    r.put(m, r.getOrDefault(m, 0) + 1);
-                    rSz++; t += m;
-                } else if (rSz > lSz) {
-                    int m = r.firstKey();
-                    if (r.put(m, r.get(m) - 1) == 1) r.remove(m);
-                    rSz--; t -= m;
-                    l.put(m, l.getOrDefault(m, 0) + 1);
-                    lSz++; s += m;
+                total -= nums[i - x];
+                for (int p = rk[i - x]; p <= m; p += p & -p) {
+                    cnt[p] -= 1;
+                    sm[p] -= nums[i - x];
                 }
             }
-
             if (i >= x - 1) {
-                long m = l.lastKey();
-                w[i - x + 1] = (m * lSz - s) + (t - m * rSz);
-            }
-        }
-
-        long[][] d = new long[n + 1][k + 1];
-        for (int i = 0; i <= n; i++) Arrays.fill(d[i], (long) 1e15);
-        d[0][0] = 0;
-
-        for (int i = 0; i < n; i++) {
-            for (int j = 0; j <= k; j++) {
-                if (d[i][j] >= 1e15) continue;
-                d[i + 1][j] = Math.min(d[i + 1][j], d[i][j]);
-                if (j < k && i + x <= n) {
-                    d[i + x][j + 1] = Math.min(d[i + x][j + 1], d[i][j] + w[i]);
+                int pos = 0, rem = need;
+                long s0 = 0;
+                for (int pw = top; pw > 0; pw >>= 1) {
+                    int nxt = pos + pw;
+                    if (nxt <= m && cnt[nxt] < rem) {
+                        pos = nxt;
+                        rem -= cnt[nxt];
+                        s0 += sm[nxt];
+                    }
                 }
+                long med = vals[pos];
+                long c0 = need - rem;
+                cost[i - x + 1] = med * c0 - s0 + (total - s0) - med * (x - c0);
             }
         }
-        return d[n][k];
+        long INF = 1000000000000000000L;
+        long[] prev = new long[n + 1];
+        long[] cur = new long[n + 1];
+        for (int j = 0; j < k; j++) {
+            for (int i = 0; i < x; i++) cur[i] = INF;
+            for (int i = x; i <= n; i++) {
+                long a = cur[i - 1];
+                long b = prev[i - x] + cost[i - x];
+                cur[i] = a < b ? a : b;
+            }
+            long[] t = prev;
+            prev = cur;
+            cur = t;
+        }
+        return prev[n];
     }
 }
