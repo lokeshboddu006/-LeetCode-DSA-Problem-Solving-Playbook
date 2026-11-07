@@ -50,3 +50,86 @@
 	<li><code>1 &lt;= n, m &lt;= 2 * 10<sup>5</sup></code></li>
 	<li><code>1 &lt;= servers[i], tasks[j] &lt;= 2 * 10<sup>5</sup></code></li>
 </ul>
+
+---
+
+## 🧠 AI Explanation
+
+### 💡 Intuition
+
+The core idea behind this solution is to simulate the task assignment process using **two min-heaps (PriorityQueues)** to track the state of servers over time:
+
+1. **Available Servers Heap (`a`)**: Stores all currently free servers. It prioritizes servers by lowest weight first, and then by lowest server index.
+2. **Busy Servers Heap (`b`)**: Stores servers currently processing tasks. It prioritizes servers by the time they become free first, followed by weight, and then index.
+
+Instead of simulating time second-by-second (which would be too slow if `c` becomes large), the code uses a variable `c` to track the current simulation time. If no servers are free when a task needs to be processed, the current time `c` fast-forwards directly to when the earliest busy server finishes.
+
+### 🔍 Approach
+
+1. **Heap Initialization**:
+   - `a` is initialized as a Min-Heap of `[weight, index]`.
+   - `b` is initialized as a Min-Heap of `[freeTime, weight, index]`.
+   - Populate `a` with all servers initially (since all servers are available at second `0`).
+
+2. **Iterating Through Tasks**:
+   Loop through each task `t[j]` from `j = 0` to `t.length - 1`:
+   - **Time Alignment**: Update `c = Math.max(c, j)` to ensure current time is at least task insertion time `j`.
+   - **Fast-Forwarding**: If `a` is empty (no free servers), update `c = Math.max(c, b.peek()[0])` to jump time forward to the instant the earliest working server becomes free.
+   - **Releasing Servers**: Execute a `while` loop to pop all servers from `b` whose `freeTime <= c`. Put them back into `a` as available servers `[weight, index]`.
+   - **Assigning Task**:
+     - Poll the best available server `u` from `a` (which guarantees the smallest weight, then index).
+     - Store its index `u[1]` in the result array `r[j]`.
+     - Push server `u` to busy heap `b` with its new free time: `[c + t[j], weight, index]`.
+
+3. **Return Result**:
+   - After assigning all `m` tasks, return the result array `r`.
+
+### 🧩 Algorithm
+
+The solution implements a **Min-Heap-Based Event Simulation**:
+
+- **Available Priority Queue Order (`a`)**:
+  Compare element `x = [weight, index]` and `y = [weight, index]`:
+  $$\text{Priority}(x) < \text{Priority}(y) \iff (x_0 < y_0) \lor (x_0 = y_0 \land x_1 < y_1)$$
+
+- **Busy Priority Queue Order (`b`)**:
+  Compare element `x = [freeTime, weight, index]` and `y = [freeTime, weight, index]`:
+  $$\text{Priority}(x) < \text{Priority}(y) \iff (x_0 < y_0) \lor (x_0 = y_0 \land x_1 < y_1) \lor (x_0 = y_0 \land x_1 = y_1 \land x_2 < y_2)$$
+
+- **Time Transition**:
+  $$c \leftarrow \max(c, j)$$
+  If $a$ is empty: $c \leftarrow \max(c, b.\text{peek}()[0])$
+
+### ✅ Why This Works
+
+1. **Correct Server Selection**: PriorityQueue `a` sorts servers by `[weight, index]`. When `a.poll()` is called, it guarantees picking the free server with the minimal weight and minimal index, satisfying the problem's strict selection rule.
+2. **Correct Processing Timeline**: PriorityQueue `b` keeps track of busy servers ordered by `freeTime`. Whenever current time `c` reaches or passes a server's `freeTime`, that server is popped from `b` and pushed back into `a`.
+3. **No Redundant Time Steps**: Fast-forwarding `c` to `b.peek()[0]` when `a` is empty ensures the simulation skips idle seconds efficiently without losing temporal ordering.
+
+### ⏱️ Complexity
+
+- **Time Complexity**: $\mathcal{O}((n + m) \log n)$
+  - Inserting $n$ servers into heap `a` initially takes $\mathcal{O}(n \log n)$.
+  - Processing each of the $m$ tasks involves heap operations (`offer`/`poll`) on `a` and `b`. Since at most $n$ servers exist across both heaps, each operation takes $\mathcal{O}(\log n)$.
+  - Overall time complexity is $\mathcal{O}((n + m) \log n)$, which comfortably runs within the given limits ($n, m \le 2 \cdot 10^5$).
+
+- **Space Complexity**: $\mathcal{O}(n + m)$
+  - Heaps `a` and `b` hold at most $n$ server elements combined: $\mathcal{O}(n)$ space.
+  - Output array `r` takes $\mathcal{O}(m)$ space.
+
+### 🧠 DSA Pattern
+
+- **Heap / Priority Queue**: Dual min-heaps to handle two dynamic subsets (available vs. busy).
+- **Simulation / Event-Driven Programming**: Advancing current time based on events (task arrival time `j` or server release time `b.peek()[0]`).
+
+### ⚠️ Common Mistakes
+
+1. **Integer Overflow in Comparators**: Using subtraction like `x[0] - y[0]` in comparators can lead to integer overflow if values can be negative or large. Here, `freeTime` can reach up to $2 \cdot 10^5 + 2 \cdot 10^5 \times 2 \cdot 10^5 \approx 4 \cdot 10^{10}$, which **exceeds 32-bit Integer range** (`2 * 10^9`). 
+   - *In this code*: The user safely used `Integer.compare(x[0], y[0])` for `b`'s `freeTime`, avoiding overflow bugs when comparing large time values!
+2. **Forgetting Time Jumps**: Simply incrementing time `c++` one second at a time would result in a **Time Limit Exceeded (TLE)** error. Fast-forwarding `c = Math.max(c, b.peek()[0])` when `a` is empty is critical.
+3. **Task Queue Processing Order**: Modifying `c` without checking `c = Math.max(c, j)` would break the requirement that task `j` is inserted at second `j`.
+
+### 🚀 Optimization Notes
+
+- **Optimal Strategy**: The implementation already achieves optimal asymptotic time complexity $\mathcal{O}((n + m) \log n)$.
+- **Primitive Array Heap Elements**: Small integer arrays `int[]` are used as heap elements. While creating many `int[]` objects can cause garbage collection overhead in Java, it remains efficient enough to pass within time limits.
