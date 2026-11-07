@@ -50,3 +50,106 @@
 	<li><code>1 &lt;= n, m &lt;= 2 * 10<sup>5</sup></code></li>
 	<li><code>1 &lt;= servers[i], tasks[j] &lt;= 2 * 10<sup>5</sup></code></li>
 </ul>
+
+---
+
+## 🧠 AI Explanation
+
+### 💡 Intuition
+
+The core problem requires assigning tasks to servers based on strict priority rules: lowest weight first, and then lowest server index to break ties. If no servers are available at second `j`, the next task must wait for the earliest server to become free.
+
+Your solution manages this dynamic state using two Min-Heaps (Priority Queues):
+1. **`free` heap**: Holds all currently idle servers, prioritized by `(weight, index)`.
+2. **`busy` heap**: Holds all servers currently processing tasks, prioritized by `(free_time, weight, index)`.
+
+By maintaining these two heaps, you can instantly fetch the best available server at any given second, or jump time forward to the earliest server release time if all servers are busy.
+
+---
+
+### 🔍 Approach
+
+1. **Initialization**:
+   - Create a `free` min-heap ordered primarily by `server weight` (`a[0] - b[0]`), then by `server index` (`a[1] - b[1]`).
+   - Populate `free` with all given servers `[servers[i], i]`.
+   - Create a `busy` min-heap storing `long[]` arrays structured as `[free_time, weight, index]`. It is ordered primarily by `free_time`, then by `weight`, then by `index`.
+
+2. **Iterating Through Tasks**:
+   - Loop through tasks using index `j` (which also represents time second `j`).
+   - **Release Finished Servers**: Before assigning task `j`, check `busy.peek()[0] <= j`. Transfer all servers whose `free_time` is less than or equal to `j` back into the `free` heap.
+   - **Case 1: At least one server is free (`!free.isEmpty()`)**:
+     - Extract the top server `cur` from `free`.
+     - Store its index in `ans[j] = cur[1]`.
+     - Move it to `busy` with release time set to `j + tasks[j]`.
+   - **Case 2: All servers are busy (`free.isEmpty()`)**:
+     - Poll the server `cur` from `busy` that finishes the earliest (at timestamp `cur[0]`).
+     - Assign task `j` to this server: `ans[j] = (int)cur[2]`.
+     - Re-insert it into `busy` with updated completion time: `cur[0] + tasks[j]`. This implicitly fast-forwards time for task `j` without executing empty loop iterations.
+
+3. **Return Result**:
+   - Return the filled `ans` array containing the server assigned to each task.
+
+---
+
+### 🧩 Algorithm
+
+This solution implements a **Two-Heap Event Simulation**:
+
+- **`free` heap comparator**: 
+  $$\text{Compare}(a, b) = \begin{cases} 
+  a[0] - b[0], & \text{if } a[0] \neq b[0] \\ 
+  a[1] - b[1], & \text{otherwise} 
+  \end{cases}$$
+
+- **`busy` heap comparator**: 
+  Lexicographical ordering on `(free\_time, weight, index)`.
+
+- **State Transitions**:
+  - Task $j$ at time $j$:
+    - $\text{busy} \xrightarrow{\text{free\_time} \le j} \text{free}$
+    - If $\text{free} \neq \emptyset$: $\text{free} \xrightarrow{\text{poll}} \text{busy}$ with new free time $j + \text{tasks}[j]$
+    - If $\text{free} = \emptyset$: $\text{busy} \xrightarrow{\text{poll standard top}} \text{busy}$ with new free time $\text{busy.top.free\_time} + \text{tasks}[j]$
+
+---
+
+### ✅ Why This Works
+
+- **Correct Priority Ordering**: The `free` heap guarantees that the server with the smallest weight (and smallest index on ties) is always polled first.
+- **Timestamp Integrity**: The `while` loop checks `busy.peek()[0] <= j`, ensuring that all servers that finish on or before second `j` become available before task `j` is processed.
+- **Implicit Time-Jumping**: When `free` is empty, pulling directly from `busy` correctly picks the server that will be available earliest. Computing `cur[0] + tasks[j]` correctly simulates assigning task `j` at time `cur[0]` as soon as the server becomes free, without needing a step-by-step time loop.
+
+---
+
+### ⏱️ Complexity
+
+- **Time Complexity:** $\mathcal{O}((N + M) \log N)$
+  - Inserting $N$ servers into the `free` heap takes $\mathcal{O}(N \log N)$.
+  - For each of the $M$ tasks, each server enters and leaves the `free` and `busy` heaps a constant number of times across the algorithm. Each heap operation takes $\mathcal{O}(\log N)$ because the heaps contain at most $N$ elements at any point.
+  - Total time complexity: $\mathcal{O}((N + M) \log N)$.
+
+- **Space Complexity:** $\mathcal{O}(N + M)$
+  - `free` heap stores up to $N$ `int[]` elements ($\mathcal{O}(N)$).
+  - `busy` heap stores up to $N$ `long[]` elements ($\mathcal{O}(N)$).
+  - `ans` array stores $M$ integers ($\mathcal{O}(M)$).
+
+---
+
+### 🧠 DSA Pattern
+
+- **Heap / Priority Queue**: Dual-heap design (one heap for available resources, one heap for scheduled events/in-flight resources).
+- **Simulation**: Event-driven queue simulation.
+
+---
+
+### ⚠️ Common Mistakes
+
+1. **Integer Overflow on Time**: `j + tasks[j]` or accumulating busy times `cur[0] + tasks[j]` can exceed $2^{31} - 1$ when processing many tasks. Your solution avoids this by storing times as `long` inside `busy` (`long[]`).
+2. **Forgetting Tie-Breaking Criteria**: Comparing only `free_time` in `busy` without considering `weight` and `index` can cause incorrect server selection when multiple servers free up at the exact same timestamp. Your 3-tier comparator handles this correctly.
+3. **Simulating Second-by-Second**: Incrementing a `time` variable by `1` per step can result in TLE (Time Limit Exceeded) when server execution times are large (up to $2 \cdot 10^5$). Jumping time using `cur[0]` when `free` is empty avoids TLE.
+
+---
+
+### 🚀 Optimization Notes
+
+- The solution is optimal in terms of asymptotic time complexity $\mathcal{O}((N + M) \log N)$.
+- Object allocation inside loops: `new int[]` and `new long[]` are created frequently during execution. Creating a custom class or using fixed primitive arrays could marginally improve execution time and memory footprint in Java, but the current approach is clean and well-structured.
