@@ -1,21 +1,29 @@
+import java.util.*;
 class Solution {
-    record Job(int at, int server) {} 
-    public List<Integer> busiestServers(int k, int[] arrival, int[] load) {
-        PriorityQueue<Integer> free = new PriorityQueue<>(); 
-        for (int x = 0; x < k; x++) free.add(x); 
-        PriorityQueue<Job> busy = new PriorityQueue<>(Comparator.comparingInt(Job::at));
-        int[] handled = new int[k];
-        for (int i = 0; i < arrival.length; i++) {
-            while (!busy.isEmpty() && busy.peek().at() <= arrival[i]) {  
-                int x = busy.poll().server();
-                free.add(i + Math.floorMod(x - i, k));  
+    public List<Integer> busiestServers(int k, int[] a, int[] t) {
+        int[] c = new int[k];
+        TreeSet<Integer> free = new TreeSet<>();
+        for (int i = 0; i < k; i++) free.add(i);
+        PriorityQueue<int[]> busy = new PriorityQueue<>((x, y) -> x[0] - y[0]);
+        for (int i = 0; i < a.length; i++) {
+            int arrival = a[i];
+            while (!busy.isEmpty() && busy.peek()[0] <= arrival) {
+                free.add(busy.poll()[1]);
             }
             if (free.isEmpty()) continue;
-            int x = free.poll() % k;
-            busy.add(new Job(arrival[i] + load[i], x));
-            handled[x]++;
+            
+            Integer s = free.ceiling(i % k);
+            if (s == null) s = free.first();
+            c[s]++;
+            free.remove(s);
+            busy.offer(new int[]{arrival + t[i], s});
         }
-        int most = Arrays.stream(handled).max().getAsInt();
-        return IntStream.range(0, k).filter(x -> handled[x] == most).boxed().toList();
+        int m = 0;
+        for (int x : c) m = Math.max(m, x);
+        List<Integer> r = new ArrayList<>();
+        for (int i = 0; i < k; i++) {
+            if (c[i] == m) r.add(i);
+        }
+        return r;
     }
 }
