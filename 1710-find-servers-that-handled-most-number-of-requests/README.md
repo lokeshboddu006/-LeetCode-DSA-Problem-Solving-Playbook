@@ -54,3 +54,108 @@ Server 0 handled two requests, while servers 1 and 2 handled one request each. H
 	<li><code>1 &lt;= arrival[i], load[i] &lt;= 10<sup>9</sup></code></li>
 	<li><code>arrival</code> is <strong>strictly increasing</strong>.</li>
 </ul>
+
+---
+
+## 🧠 AI Explanation
+
+### 💡 Intuition
+
+The code simulates a server assignment process using two **Priority Queues (Min-Heaps)**:
+
+1. **`busy`**: Tracks active servers ordered by their job completion time (`at`).
+2. **`free`**: Tracks available servers.
+
+To satisfy the requirement that request `i` should be assigned to server `(i % k)` or the next available server in cyclic order, the solution converts server IDs into a **virtual offset relative to the current request index `i`**. 
+
+When server `x` becomes available during request `i`, it is inserted into the `free` min-heap using the value `i + Math.floorMod(x - i, k)`. This projects server `x` onto the smallest integer $\ge i$ such that `value % k == x`. The min-heap then automatically prioritizes available servers that are closest to `i % k` in clockwise order.
+
+---
+
+### 🔍 Approach
+
+1. **Initialization**:
+   - `free`: A `PriorityQueue<Integer>` storing virtual server indices. Initially populated with `0` to `k - 1`.
+   - `busy`: A `PriorityQueue<Job>` storing active jobs ordered by finish time (`Job::at`).
+   - `handled`: An array of size `k` tracking how many requests each server successfully handles.
+
+2. **Processing Requests**:
+   For each request `i` at time `arrival[i]` with duration `load[i]`:
+   - **Release Completed Jobs**: Check the `busy` heap. While the earliest completing job has `at <= arrival[i]`, remove it. For the freed server `x`, compute its virtual position `i + Math.floorMod(x - i, k)` and insert it into `free`.
+   - **Assign Server**:
+     - If `free` is empty, all servers are currently busy; the request is dropped.
+     - Otherwise, poll the top element from `free`. Retrieve the true server ID via `x = free.poll() % k`.
+     - Schedule the job by adding `new Job(arrival[i] + load[i], x)` into `busy`.
+     - Increment `handled[x]`.
+
+3. **Finding Busiest Server(s)**:
+   - Calculate the maximum request count among all servers using `Arrays.stream(handled).max()`.
+   - Filter and collect all server indices `0` to `k - 1` whose handled count matches this maximum.
+
+---
+
+### 🧩 Algorithm
+
+#### Server Distance Indexing
+When server `x` is freed during request `i`, the relative offset to `x` from index `i` modulo `k` is calculated as:
+$$\text{offset} = (x - i) \bmod k$$
+
+In Java, `Math.floorMod(x - i, k)` ensures a non-negative result in the range $[0, k - 1]$. The virtual value pushed to `free` is:
+$$\text{virtual\_index} = i + \text{Math.floorMod}(x - i, k)$$
+
+When polling from `free`:
+$$\text{server\_id} = \text{virtual\_index} \pmod k$$
+
+#### Discrete Event Simulation
+- **State**:
+  - `free`: Min-heap of available server representations.
+  - `busy`: Min-heap of `Job(at, server)` sorted by `at`.
+  - `handled`: Counts of requests per server.
+
+---
+
+### ✅ Why This Works
+
+- **Chronological Simulation**: The `busy` heap ensures that all servers finishing their work prior to or at `arrival[i]` are marked free before attempting to process request `i`.
+- **Cyclic Order Selection**: Pushing `i + Math.floorMod(x - i, k)` into `free` positions server `x` relative to current request `i`. Because `free` is a min-heap, popping from `free` gives the server with the smallest non-negative cyclic distance from `i % k`.
+- **Modulus Recovery**: Modulo operation `x = free.poll() % k` accurately converts the projected virtual index back to the real server index in $[0, k - 1]$.
+
+---
+
+### ⏱️ Complexity
+
+- **Time Complexity**: 
+  - Heap initialization: $O(k \log k)$ to add all servers to `free`.
+  - Event loop: For $N$ requests, each job is pushed to and popped from `busy` at most once ($O(N \log k)$ operations), and inserted/extracted from `free` ($O(N \log k)$ operations).
+  - Max stream evaluation and filtering: $O(k)$.
+  - **Total Time Complexity**: $\mathcal{O}((N + k) \log k)$, where $N$ is the number of requests and $k$ is the number of servers.
+
+- **Space Complexity**:
+  - `free` heap holds at most $k$ integers.
+  - `busy` heap holds at most $k$ `Job` records.
+  - `handled` array takes $O(k)$ space.
+  - **Total Space Complexity**: $\mathcal{O}(k)$.
+
+---
+
+### 🧠 DSA Pattern
+
+- **Heap / Priority Queue**: Used for both time-based event processing (`busy` queue) and dynamic priority assignment (`free` queue).
+- **Simulation**: Event-driven simulation tracking hardware resource allocation over time.
+
+---
+
+### ⚠️ Common Mistakes & Implementation Limitations
+
+1. **Stale Virtual Indices in `free`**:
+   - Because virtual indices `i + Math.floorMod(x - i, k)` depend on step `i` at insertion time, if a server stays in `free` across multiple requests without being polled, its virtual index in `free` remains fixed to the request step when it was freed. Under certain sequences of idle requests, its position relative to a much later request $i'$ might not strictly reflect the closest distance to $i' \pmod k$.
+
+2. **Using `%` instead of `Math.floorMod`**:
+   - Standard `%` operator in Java returns negative results when the dividend is negative (e.g., `(2 - 5) % 3 == -1`). Using `Math.floorMod` ensures non-negative distances.
+
+---
+
+### 🚀 Optimization Notes
+
+- **Java `record`**: The code uses Java 14+ `record Job(int at, int server) {}`, which provides an immutable data holder with minimal boilerplate.
+- **Java Streams**: `Arrays.stream(handled).max()` and `IntStream.range(...)` provide concise result aggregation, though standard `for` loops could reduce object overhead slightly.
