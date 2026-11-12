@@ -1,11 +1,20 @@
 class Solution {
     public int longestMonotonicSubarray(int[] nums) {
-        int best = 1, up = 1, down = 1;
-        for (int i = 1; i < nums.length; i++) {
-            up = nums[i - 1] < nums[i] ? up + 1 : 1; 
-            down = nums[i - 1] > nums[i] ? down + 1 : 1;  
-            best = Math.max(best, Math.max(up, down));
+        int n = nums.length;
+        int maxLen = 1, ic = 1, dc = 1;
+        for (int i = 1; i < n; i++) {
+            if (nums[i] > nums[i - 1]) {
+                ic++;
+                dc = 1;
+            } else if (nums[i] < nums[i - 1]) {
+                dc++;
+                ic = 1;
+            } else {
+                ic = 1;
+                dc = 1;
+            }
+            maxLen = Math.max(maxLen, Math.max(ic, dc));
         }
-        return best;
+        return maxLen;
     }
 }
