@@ -1,23 +1,27 @@
 class Solution {
     public long countNonDecreasingSubarrays(int[] nums, int k) {
-        Deque<Integer> starts = new ArrayDeque<>();  
-        long ans = 0, water = 0;
-        int n = nums.length, r = n - 1;
-        for (int l = n - 1; l >= 0; l--) {
-            int x = nums[l];
-            while (!starts.isEmpty() && nums[starts.peekFirst()] <= x) {  
-                int s = starts.pollFirst();
-                int end = starts.isEmpty() ? r + 1 : starts.peekFirst();
-                water += (long) (x - nums[s]) * (end - s);
+        long ans = 0;
+        long cost = 0;
+        Deque<int[]> dq = new ArrayDeque<>();
+        int n = nums.length;
+        for (int i = n - 1, j = n - 1; i >= 0; --i) {
+            int num = nums[i];
+            int count = 1;
+            while (!dq.isEmpty() && dq.peekLast()[0] < num) {
+                int[] back = dq.pollLast();
+                count += back[1];
+                cost += (long) (num - back[0]) * back[1];
             }
-            starts.offerFirst(l);
-            while (water > k) { 
-                water -= nums[starts.peekLast()] - nums[r];
-                if (starts.peekLast() == r)
-                    starts.pollLast();
-                r--;
+            dq.offerLast(new int[]{num, count});
+            while (cost > k) {
+                int[] front = dq.pollFirst();
+                cost -= (long) (front[0] - nums[j]);
+                --j;
+                if (front[1] > 1) {
+                    dq.offerFirst(new int[]{front[0], front[1] - 1});
+                }
             }
-            ans += r - l + 1;
+            ans += j - i + 1;
         }
         return ans;
     }
