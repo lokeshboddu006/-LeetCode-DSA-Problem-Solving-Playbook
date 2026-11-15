@@ -1,19 +1,11 @@
 class Solution {
     public int numOfSubarrays(int[] arr) {
-        final int mod = 1000000007;
-        int even = 1, odd = 0;
-        long res = 0;
-        int sum = 0;
-        for (int x : arr) {
-            sum = (sum + x) % 2;
-            if (sum == 1) {
-                res = (res + even) % mod;
-                odd++;
-            } else {
-                res = (res + odd) % mod;
-                even++;
-            }
+        long oddCount = 0, prefixSum = 0;
+        for(int a : arr){
+            prefixSum += a;
+            oddCount += prefixSum % 2;
         }
-        return (int) res;
+        oddCount += (arr.length - oddCount) * oddCount;
+        return (int)(oddCount % 1_000_000_007);
     }
 }
