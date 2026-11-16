@@ -45,3 +45,61 @@ s becomes &quot;0&quot; + &quot;0&quot; + &quot;0&quot; = &quot;000&quot;, whose
 	<li><code>2 &lt;= k &lt;= 100</code></li>
 	<li><code>s</code> consists of digits only.</li>
 </ul>
+
+---
+
+## 🧠 AI Explanation
+
+### 💡 Intuition
+
+The solution directly simulates the problem's step-by-step process. As long as the string `s` has a length strictly greater than `k`, it breaks the string into contiguous chunks of length up to `k`. For each chunk, it calculates the numerical sum of its digits, converts that sum back into text, and appends it to form a new string for the next round.
+
+### 🔍 Approach
+
+1. **Termination Condition (`while (s.length() > k)`)**:
+   - The outer loop runs as long as the length of string `s` exceeds `k`. Once `s.length() <= k`, the loop exits and the function returns `s`.
+
+2. **Chunking and Summing**:
+   - A `StringBuilder sb` is instantiated to accumulate the new string generated in the current round.
+   - The `for` loop steps through index `i` in increments of `k` (`i += k`).
+   - To prevent going out of bounds on the last chunk, `end` is calculated as `Math.min(i + k, n)`.
+   - An inner `for` loop iterates from `j = i` to `j < end`, converting each character `s.charAt(j)` to its integer value via `s.charAt(j) - '0'` and accumulating it into `sum`.
+
+3. **Rebuilding the String**:
+   - `sb.append(sum)` appends the calculated integer sum to the `StringBuilder`.
+   - After visiting all chunks, `s` is updated with `sb.toString()` to start the next round with the newly formed string.
+
+### 🧩 Algorithm
+
+- **Loop Invariant**: At the start of each iteration of the `while` loop, `s` represents the string state resulting from all previous rounds.
+- **Chunk Bounds**: `[i, Math.min(i + k, s.length()))` for `i = 0, k, 2k, ...`
+- **Digit Conversion**: `digit = s.charAt(j) - '0'`
+- **Group Reduction**: $\text{sum} = \sum_{j=i}^{\text{end}-1} \text{digit}(j)$
+- **State Transition**: $s_{\text{next}} = \text{concat}(\text{String}(\text{sum}_1), \text{String}(\text{sum}_2), \dots)$
+
+### ✅ Why This Works
+
+- **Index Safety**: Using `Math.min(i + k, n)` ensures that the last group is safely processed even if its size is strictly less than `k`, preventing `StringIndexOutOfBoundsException`.
+- **ASCII to Numeric Mapping**: Subtracting `'0'` (`'0'` has ASCII value 48) converts digit characters directly to their numerical integer values `0-9`.
+- **Automatic Group Merging**: Appending integer sums sequentially to `StringBuilder` implicitly performs step 2 and step 3 (replacement and merging) in order.
+
+### ⏱️ Complexity
+
+- **Time Complexity**: $O(N)$ where $N$ is the length of string `s`. In each round, every character of the string is processed once. Because the length of `s` decreases significantly with each round (since `k >= 2`), the overall work done across all rounds forms a rapidly decaying series bounded by $O(N)$.
+- **Space Complexity**: $O(N)$ auxiliary space, as a new `StringBuilder` of length at most $N$ is created to store the string for each round.
+
+### 🧠 DSA Pattern
+
+- **Simulation**
+- **String Manipulation**
+
+### ⚠️ Common Mistakes
+
+1. **Accessing Out-of-Bounds Indices**: Forgetting `Math.min(i + k, n)` and directly iterating up to `i + k` would throw a `StringIndexOutOfBoundsException` on the final group if `n` is not divisible by `k`.
+2. **Incorrect Digit Conversion**: Using `Character.getNumericValue()` or forgetting `- '0'` (which would sum the ASCII codes of characters instead of their numeric values).
+3. **Loop Condition Errors**: Using `s.length() >= k` instead of `s.length() > k`, which would cause an unnecessary extra round when the string length is already exactly `k`.
+
+### 🚀 Optimization Notes
+
+- The submitted implementation is already clean, readable, and optimal for the constraints ($N \le 100$).
+- Using `StringBuilder` avoids excessive temporary string allocations during chunk concatenation within each round.
