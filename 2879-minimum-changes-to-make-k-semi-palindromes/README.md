@@ -71,3 +71,91 @@
 	<li><code>1 &lt;= k &lt;= s.length / 2</code></li>
 	<li><code>s</code> contains only lowercase English letters.</li>
 </ul>
+
+---
+
+## 🧠 AI Explanation
+
+### 💡 Intuition
+
+The problem requires partitioning a string $s$ into $k$ contiguous substrings such that the total number of character changes to make every substring a **semi-palindrome** is minimized.
+
+Your solution solves this using a two-level **Top-Down Dynamic Programming with Memoization** approach:
+1. **Partitioning Level (`dfs`)**: Recursively decides where to place substring boundaries to split the string into $k$ parts, memoizing states $(i, k)$ representing the starting index $i$ and remaining partitions $k$.
+2. **Cost Calculation Level (`calculate` & `check`)**: For any substring $s[i \dots j]$, calculates the minimum changes needed to make it a semi-palindrome by checking all proper divisors $d$ of the substring's length and memoizing the results in a 2D `cache`.
+
+---
+
+### 🔍 Approach
+
+Your solution is structured into three main component functions:
+
+1. **`minimumChanges(String s, int k)`**:
+   - Initializes `dp[n][k + 1]` table with `-1` to memoize subproblems of splitting $s[i \dots n-1]$ into $k$ parts.
+   - Initializes `cache[n][n]` table with `-1` to memoize the cost of turning substring $s[i \dots j]$ into a semi-palindrome.
+   - Invokes `dfs(s, 0, k, dp, cache)` to get the answer.
+
+2. **`dfs(String s, int i, int k, int[][] dp, int[][] cache)`**:
+   - **Base Cases & Pruning**:
+     - If $i \ge n$: returns `0` if $k == 0$, else `Integer.MAX_VALUE` (invalid state).
+     - Returns memoized `dp[i][k]` if already computed.
+     - Early pruning: `if (n - i < k + k)`, returns `Integer.MAX_VALUE` because every semi-palindrome substring must have a length of at least `2`. If remaining characters are less than $2k$, it's impossible.
+     - If $k == 1$: the rest of the string $s[i \dots n-1]$ must form 1 semi-palindrome, so it calls `calculate(s, i, n - 1, cache)`.
+   - **Transitions**:
+     - Iterates over all possible ending indices $j$ from $i$ to $n - 1$.
+     - Solves subproblem recursively for the remaining suffix: `temp = dfs(s, j + 1, k - 1, dp, cache)`.
+     - If valid (`temp < Integer.MAX_VALUE`), computes cost for current segment `calculate(s, i, j, cache)` and updates `dp[i][k] = min(dp[i][k], temp + changes)`.
+
+3. **`calculate(String s, int i, int j, int[][] cache)`**:
+   - Calculates the minimum changes to make substring $s[i \dots j]$ a semi-palindrome.
+   - If `len == 1`, returns `Integer.MAX_VALUE` since a length of 1 has no valid proper divisor strictly less than its length.
+   - Finds all proper divisors $d$ of `len` ($1 \le d < len$). It iterates $d$ from $1$ up to $\lfloor\sqrt{len}\rfloor$.
+   - For each valid divisor pair $(d, num)$ where $d \times num = len$:
+     - Calls `check(s, i, d, num)` for stride $d$.
+     - If $num$ is also a valid proper divisor ($d \neq num$ and $d \neq 1$), calls `check(s, i, num, d)` for stride $num$.
+   - Keeps the minimum cost across all valid divisors and stores it in `cache[i][j]`.
+
+4. **`check(String s, int start, int d, int num)`**:
+   - Calculates changes required for substring starting at `start` with a fixed divisor $d$.
+   - For each offset $0 \le \text{offset} < d$ (each of the $d$ modulo groups):
+     - Uses two pointers `i` and `j` moving inwards within the group by steps of $d$:
+       - `i = start + offset`
+       - `j = i + d * (num - 1)`
+     - Increments `changes` whenever characters at $i$ and $j$ mismatch (`s.charAt(i) != s.charAt(j)`).
+
+---
+
+### 🧩 Algorithm
+
+#### DP State
+- $dp[i][k]$: The minimum letter changes needed to split suffix $s[i \dots n-1]$ into $k$ semi-palindrome substrings.
+
+#### Recurrence Relation
+$$dp[i][k] = \min_{i \le j < n} \left( dp[j + 1][k - 1] + \text{calculate}(s, i, j) \right)$$
+
+#### Base Cases
+- $dp[n][0] = 0$
+- $dp[i][1] = \text{calculate}(s, i, n - 1)$
+- $dp[i][k] = \infty$ if $(n - i) < 2k$
+
+#### Substring Semi-Palindrome Cost Calculation
+$$\text{cache}[i][j] = \min_{\substack{d \mid len \\ 1 \le d < len}} \text{check}(s, i, d, len / d)$$
+
+---
+
+### ✅ Why This Works
+
+1. **Complete Search with Memoization**: The recursive DFS explores all valid substring partition options, guaranteed to find the global minimum by avoiding recalculation of identical subproblems via `dp[i][k]`.
+2. **Correct Semi-Palindrome Definition**: A semi-palindrome of length $L$ requires a proper divisor $d < L$ such that each character sequence $s[offset], s[offset + d], s[offset + 2d], \dots$ forms a palindrome. The `check` method directly checks the palindromic symmetry of each offset group using inward two pointers (`i += d`, `j -= d`).
+3. **Divisor Optimization**: `calculate` tests all proper divisors of $len$. By checking $d$ up to $\sqrt{len}$, both factors $d$ and $len / d$ are evaluated correctly while strictly ensuring no divisor equals $len$.
+
+---
+
+### ⏱️ Complexity
+
+- **Time Complexity:** 
+  - **Substring evaluation (`calculate` & `check`)**:
+    - There are $O(n^2)$ total substrings $s[i \dots j]$.
+    - For a length $L$, the number of proper divisors is small. For each divisor $d$, `check` visits each character of the substring once ($O(L)$ operations).
+    - Thus, filling the `cache` table takes $O(n^3)$ operations in the worst case (or $O(n^2 \cdot \text{divisors}(n) \cdot n)$).
+  - **
