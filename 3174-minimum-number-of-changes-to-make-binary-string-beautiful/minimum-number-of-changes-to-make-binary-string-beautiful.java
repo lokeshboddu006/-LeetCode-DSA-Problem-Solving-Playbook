@@ -1,5 +1,11 @@
 class Solution {
     public int minChanges(String s) {
-        return (int) IntStream.range(0, s.length() / 2).filter(i -> s.charAt(2 * i) != s.charAt(2 * i + 1)).count();
+        int ch = 0;
+        for (int i = 0; i < s.length(); i += 2) {
+            if (s.charAt(i) != s.charAt(i + 1)) {
+                ch++;
+            }
+        }
+        return ch;
     }
 }
