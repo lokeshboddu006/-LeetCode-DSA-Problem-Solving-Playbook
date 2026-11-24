@@ -1,16 +1,31 @@
 class Solution {
     public int maxLength(int[] nums) {
-        int best = 2, left = 0, product = 1;
-        for (int right = 0; right < nums.length; right++) {
-            int x = nums[right];
-            while (gcd(product, x) > 1)
-                product /= nums[left++];
-            product *= x;
-            best = Math.max(best, right - left + 1);
+        int n = nums.length, m = 1;
+        for (int i = 0; i < n; i++) {
+            int p = nums[i], g = nums[i], l = nums[i];
+            for (int j = i + 1; j < n; j++) {
+                p *= nums[j];
+                if (p > 25200) break;
+                int x = g, y = nums[j];
+                while (y != 0) {
+                    int t = y;
+                    y = x % y;
+                    x = t;
+                }
+                g = x;
+                x = l;
+                y = nums[j];
+                while (y != 0) {
+                    int t = y;
+                    y = x % y;
+                    x = t;
+                }
+                l = (l * nums[j]) / x;
+                if (l * g == p) {
+                    m = Math.max(m, j - i + 1);
+                }
+            }
         }
-        return best;
-    }
-    private int gcd(int a, int b) {
-        return b == 0 ? a : gcd(b, a % b);
+        return m;
     }
 }
